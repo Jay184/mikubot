@@ -1,0 +1,15 @@
+Jinja2
+requests
+requests-sse
+discord.py
+pydantic
+pydantic_settings
+pillow
+rich
+capstone
+emoji
+uwuipy
+pefile
+sqlitedict
+msgpack
+loguru

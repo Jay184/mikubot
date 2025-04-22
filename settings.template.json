@@ -1,0 +1,162 @@
+{
+    "storageFile": "storage.sqlite",
+    "loggingChannelId": 1000,
+    "triggerWords": {
+        "enabled": true,
+        "allowThreads": true,
+        "allowMultiple": false,
+        "ignoredRoleId": 5555,
+        "triggers": [
+            {
+                "pattern": "\\bass\\b",
+                "reply": "https://cdn.discordapp.com/attachments/421865513820618752/1071615776127201424/169F55F1-C038-41DD-9264-BD3D9E8C6D60.gif"
+            }
+        ],
+        "teamChat1Id": 9999,
+        "teamChat2Id": 8888,
+        "teamTrigger": "secret word"
+    },
+    "renameChat": {
+        "successChance": 0.02,
+        "rollTime": 3.0,
+        "failureDelay": 3.0,
+        "minMinutes": 3.0,
+        "maxMinutes": 60.0,
+        "currentStreak": 0,
+        "targetChannelId": 1112,
+        "loadingRoleId": 1113,
+        "specialRoleId": 1114,
+        "streakPostfixes": {
+            "501": ", bringing down an epic {streak} roll streak!",
+            "421": ", terminating a legendary {streak} roll streak!",
+            "420": ", blazing away a dank {streak} roll streak!",
+            "201": ", snapping a monumental {streak} roll streak!",
+            "101": ", ending an unbelievable {streak} roll streak!",
+            "91": ", annihilating an outstanding {streak} roll streak!",
+            "81": ", decimating a superb {streak} roll streak!",
+            "70": ", crushing a glorious {streak} roll streak!",
+            "69": ", ending a ***nice*** {streak} roll streak!",
+            "61": ", dismantling a magnificent {streak} roll streak!",
+            "51": ", tearing apart a fantastic {streak} roll streak!",
+            "40": ", destroying a nut busting {streak} roll streak!",
+            "39": ", breaking an exactly 39 roll streak! Waww! Miku Would be proud!",
+            "31": ", obliterating a colossal {streak} roll streak!",
+            "21": ", shattering a {streak} roll streak!",
+            "11": ", breaking a {streak} roll streak!"
+        },
+        "retrievalMessages": [
+            "{user} has been retrieved from Brazil after {delay} minutes of incarceration!",
+            "{user} has been retrieved from Brazil after {delay} minutes of incarceration!",
+            "{user} has escaped Brazil after serving {delay} minutes!",
+            "{user} is finally free from Brazil after {delay} minutes! Welcome back!",
+            "After {delay} minutes, {user} has returned from their Brazilian adventure!",
+            "{user} has completed their {delay}-minute Brazilian \"vacation\" and is back!",
+            "The great escape! {user} has returned from Brazil after {delay} minutes!",
+            "{user} has been released from Brazil after {delay} minutes of tropical punishment.",
+            "A warm welcome back to {user} after surviving {delay} minutes in Brazil!",
+            "{user} has emerged from Brazil after {delay} minutes.",
+            "After a {delay}-minute sabbatical in Brazil, {user} is finally back!",
+            "{user} has triumphantly returned from their {delay}-minute Brazilian expedition!",
+            "After {delay} minutes, Brazil has finally released {user} back into the wild!",
+            "The prodigal {user} returns after {delay} minutes in Brazil!",
+            "{user} has safely returned from a {delay}-minute Brazilian excursion!",
+            "Welcome back, {user}! Brazil couldn't hold you for more than {delay} minutes!",
+            "{user} has broken free from Brazil's grasp after {delay} minutes!",
+            "A triumphant return! {user} is back after {delay} minutes in Brazil!",
+            "After {delay} minutes, {user} has left Brazil and rejoined us!",
+            "Back from Brazil! {user} has served their {delay}-minute sentence!",
+            "Rejoice! {user} has made it back from their {delay}-minute Brazilian journey!",
+            "Bem-vindo novamente, {user}! Depois de passar {delay} minutos no Brasil, você está de volta conosco!",
+            "Heureux de te revoir, {user} ! Après {delay} minutes passées au Brésil, te voilà enfin de retour parmi nous !",
+            "¡{user}, te damos la bienvenida de nuevo! Tras pasar {delay} minutos en Brasil, ¡ya estás de vuelta con nosotros!",
+            "おかえり、{user}さん！ブラジルで{delay}分間過ごした後、無事に戻ってきましたね！",
+            "OMG {user}! WELCOME BACK UWU! AFTER {delay} MINUTES IN BRAZIL, YOU'VE RETURNED! HAZ CHEEZBURGER TO CELEBRATE! XD",
+            "Welkom terug, {user}! Na {delay} minuten in Brazilië te zijn geweest, ben je eindelijk terug! We hopen dat je je beter hebt vermaakt dan de Nederlanders die tegen de oceaan vechten!",
+            "{user}，欢迎回来！在巴西度过了{delay}分钟后，你终于回来了！感谢伟大的毛主席和光辉无比的中国共产党，他们的强大力量穿越了大洋，让你成功回归！赞美无尽！🇨🇳🇨🇳🇨🇳🇨🇳🇨🇳",
+            "{user}, you've escaped the clutches of Brazil after {delay} minutes! Welcome back, adventurer!",
+            "{user}, after {delay} minutes in Brazil, you've made it back! We missed you like a cat misses catnip!",
+            "{user}, your {delay} minutes in Brazil have come to an end! It's a bird, it's a plane, no—it's your triumphant return!",
+            "{user}, the Brazilian sun has set on your {delay} minutes of exile. Let's give a warm welcome to our prodigal member!",
+            "Hear ye, hear ye! {user} has completed their {delay} minute journey through the wilds of Brazil! Welcome back, brave traveler!",
+            "{user} is back after {delay} minutes in Brazil, and I'm as mad as when I found pickles on my McDouble when I asked for no pickles! 😡",
+            "Just like Hatsune Miku singing her way into our hearts, {user} has returned after {delay} minutes in Brazil! Welcome back!",
+            "Vocaloid superstar Hatsune Miku welcomes {user} back to the stage after {delay} minutes in Brazil! 🎤",
+            "{user}, after {delay} minutes in Brazil, your encore has arrived, and Hatsune Miku is ready to celebrate your return! 🌟",
+            "{user}, you've escaped Brazil after {delay} minutes?! This is an outrage!",
+            "{user}, you've survived {delay} minutes in Brazil?!",
+            "After {delay} minutes, {user} has returned from Brazil, against all odds!",
+            "{user}, we can't believe you made it through {delay} minutes in Brazil and lived to tell the tale! Welcome back, survivor!",
+            "In an astonishing turn of events, {user} has survived {delay} minutes in Brazil! Welcome back, you brave soul!",
+            "{user}, your incredible escape from {delay} minutes in Brazil has left us all in awe! Welcome back, champion! 🥳"
+        ]
+    },
+    "brazil": {
+        "brazilRoleId": 1115,
+        "specialBrazilRoleId": 1116,
+        "memberRoleId": 1117,
+        "teamRoleId": 1118
+    },
+    "choosableRoles": {
+        "roles": {
+            "Miku": 1111,
+            "Rin": 2222,
+            "Len": 3333,
+            "Luka": 4444,
+            "Meiko": 5555,
+            "Kaito": 6666,
+            "Teto": 7777,
+            "Gumi": 8888,
+            "HisoStreamNotfications": 9999,
+            "PokeSlow": 1234,
+            "Eden": 2341,
+            "HisoBodyGuard": 3412,
+            "HisoDickRider": 4123,
+            "IgnoredByBot": 4321
+        }
+    },
+    "gamebananaSearch": {
+        "limit": 10,
+        "full": true
+    },
+    "uwufy": {
+        "stutterChance": 0.09,
+        "faceChance": 0.03,
+        "actionChance": 0.5,
+        "exclamationChance": 0.95,
+        "nsfwActions": false,
+        "nsfwChannels": [
+            1234,
+            1234
+        ],
+        "power": 3
+    },
+    "mmCode": {
+        "maxLength": 256,
+        "allowedRole": 1234,
+        "binaries": [
+            "C:\\Steam\\steamapps\\common\\Hatsune Miku Project DIVA Mega Mix Plus\\DivaMegaMix_1c00.exe",
+            "C:\\Steam\\steamapps\\common\\Hatsune Miku Project DIVA Mega Mix Plus\\DivaMegaMix_1c01.exe",
+            "C:\\Steam\\steamapps\\common\\Hatsune Miku Project DIVA Mega Mix Plus\\DivaMegaMix_1c02.exe",
+            "C:\\Steam\\steamapps\\common\\Hatsune Miku Project DIVA Mega Mix Plus\\DivaMegaMix_1c03.exe"
+        ]
+    },
+    "zoe": {
+        "databaseFile": "zoe.sqlite",
+        "userId": 42069,
+        "scanEnabled": true,
+        "channels": {
+            "public": [
+                11111,
+                12222,
+                13333,
+                14444,
+                15555,
+                16666
+            ],
+            "private": [
+                21111,
+                22222
+            ]
+        }
+    }
+}
