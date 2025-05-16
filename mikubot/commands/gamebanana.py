@@ -92,13 +92,16 @@ def register(bot: Bot):
         results = response.json().get('_aRecords') or []
 
         # Limit results to N entries
-        result_count = len(results)
+        result_count = min(len(results), settings.limit)
 
         if result_count:
-            results = results[:settings.limit]
+            for i in range(0, result_count, 10):
+                embeds = [create_mod_embed(result, settings.full) for result in results[i:i+10]]
 
-            embeds = [create_mod_embed(result, settings.full) for result in results]
-            await interaction.followup.send(f'Found {result_count} results...', embeds=embeds)  # noqa
+                await interaction.followup.send(  # noqa
+                    f'Showing {result_count} our of {len(results)} results...',
+                    embeds=embeds
+                )
         else:
             embed = Embed(
                 title='No results found.',

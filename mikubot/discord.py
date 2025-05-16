@@ -11,6 +11,7 @@ from discord.app_commands import CommandTree
 from contextlib import contextmanager
 from .config import Settings
 from .logger import InterceptHandler
+from .stocks.market import Market
 
 
 class Bot(Client):
@@ -28,6 +29,8 @@ class Bot(Client):
         super().__init__(intents=intents, **options)
         self.tree = CommandTree(self)
         self.settings = settings
+        self.market = Market(settings.market)
+        self.market_executor = None
 
     def run(
         self,
@@ -90,17 +93,23 @@ class Bot(Client):
         if message.author == self.user:
             return
 
+        if message.author.id in self.settings.logging.excluded_users:
+            return
+
         embed = self.create_log_embed(
             message.author,
-            f'**Message deleted in <#{message.channel.id}>**\nID: {message.id}\n{message.content}',
+            f'**Message deleted in <#{message.channel.id}>**\nID: `{message.id}`\n{message.content}',
             color=0xff0000,
         )
 
-        channel = await self.fetch_channel(self.settings.logging_channel_id)
+        channel = await self.fetch_channel(self.settings.logging.channel_id)
         await channel.send(embed=embed)
 
     async def on_message_edit(self, before: Message, after: Message):
         if before.author == self.user:
+            return
+
+        if before.author.id in self.settings.logging.excluded_users:
             return
 
         if before.content == after.content:
@@ -122,20 +131,26 @@ class Bot(Client):
             value=after.content,
         )
 
-        channel = await self.fetch_channel(self.settings.logging_channel_id)
+        channel = await self.fetch_channel(self.settings.logging.channel_id)
         await channel.send(embed=embed)
 
     async def on_member_join(self, member: Member):
+        if member.id in self.settings.logging.excluded_users:
+            return
+
         embed = self.create_log_embed(
             member,
             f'**{member.global_name} has joined the server!**\nUsers in server: {member.guild.member_count}',
             color=0x00ff00,
         )
 
-        channel = await self.fetch_channel(self.settings.logging_channel_id)
+        channel = await self.fetch_channel(self.settings.logging.channel_id)
         await channel.send(embed=embed)
 
     async def on_member_remove(self, member: Member):
+        if member.id in self.settings.logging.excluded_users:
+            return
+
         role_list = ', '.join(r.name for r in member.roles)
 
         embed = self.create_log_embed(
@@ -144,10 +159,13 @@ class Bot(Client):
             color=0xff0000,
         )
 
-        channel = await self.fetch_channel(self.settings.logging_channel_id)
+        channel = await self.fetch_channel(self.settings.logging.channel_id)
         await channel.send(embed=embed)
 
     async def on_member_ban(self, guild: Guild, user: User | Member):
+        if user.id in self.settings.logging.excluded_users:
+            return
+
         log_entry = await anext(guild.audit_logs(action=AuditLogAction.ban))
         log_message = f'**{user.global_name} has been banned from the server.**'
 
@@ -155,7 +173,7 @@ class Bot(Client):
             log_message += f'\nReason: {log_entry.reason}'
 
         if log_entry.user:
-            log_message += f'\nBy: ${log_entry.user.global_name}'
+            log_message += f'\nBy: {log_entry.user.mention}'
 
         embed = self.create_log_embed(
             user,
@@ -163,10 +181,13 @@ class Bot(Client):
             color=0xff0000,
         )
 
-        channel = await self.fetch_channel(self.settings.logging_channel_id)
+        channel = await self.fetch_channel(self.settings.logging.channel_id)
         await channel.send(embed=embed)
 
     async def on_member_unban(self, guild: Guild, user: User | Member):
+        if user.id in self.settings.logging.excluded_users:
+            return
+
         log_entry = await anext(guild.audit_logs(action=AuditLogAction.unban))
         log_message = f'**{user.global_name} has been unbanned from the server.**'
 
@@ -174,7 +195,7 @@ class Bot(Client):
             log_message += f'\nReason: {log_entry.reason}'
 
         if log_entry.user:
-            log_message += f'\nBy: ${log_entry.user.global_name}'
+            log_message += f'\nBy: {log_entry.user.mention}'
 
         embed = self.create_log_embed(
             user,
@@ -182,11 +203,12 @@ class Bot(Client):
             color=0x00ff00,
         )
 
-        channel = await self.fetch_channel(self.settings.logging_channel_id)
+        channel = await self.fetch_channel(self.settings.logging.channel_id)
         await channel.send(embed=embed)
 
     async def setup_hook(self):
         import mikubot.commands as commands
+        from .stocks.command import register as register_stock_market
 
         commands.sync.register(self)
         commands.settings.register(self)
@@ -222,6 +244,14 @@ class Bot(Client):
         commands.wrongfolder.register(self)
         commands.you_are_going_to_brazil.register(self)
         commands.zoe.register(self)
+        register_stock_market(self)
+
+        if self.settings.market.enabled:
+            logger.info('Starting stock market.')
+
+            if not self.market_executor:
+                self.market_executor = self.market.transaction_executor_loop(interval=self.settings.market.executor_interval)
+                asyncio.create_task(self.market_executor)
 
         if self.settings.zoe.scan_enabled:
             logger.info('Scanning for Zoe messages.')
@@ -238,9 +268,17 @@ class Bot(Client):
         for guild in self.guilds:
             brazil_role = await guild.fetch_role(settings.brazil_role_id)
             member_role = await guild.fetch_role(settings.member_role_id)
+            special_role = await guild.fetch_role(self.settings.rename_chat.special_role_id)
+            special_brazil_role = await guild.fetch_role(settings.special_brazil_role_id)
 
             for member in brazil_role.members:
                 await member.remove_roles(brazil_role)
+                await member.add_roles(member_role)
+                logger.info(f'{member.display_name} has been retrieved from Brazil!')
+
+            for member in special_brazil_role.members:
+                await member.remove_roles(special_brazil_role)
+                await member.add_roles(special_role)
                 await member.add_roles(member_role)
                 logger.info(f'{member.display_name} has been retrieved from Brazil!')
 

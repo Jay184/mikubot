@@ -63,8 +63,17 @@ class RenameChatModal1(SettingsModal, title='Rename chat settings (1)'):
 
 
 class RenameChatModal2(SettingsModal, title='Rename chat settings (2)'):
-    current_streak = TextInput(
-        label='Current streak',
+    keep_messages = TextInput(
+        label='Full output',
+        placeholder='true',
+        default='true',
+        required=True,
+    )
+
+    ephemeral_messages = TextInput(
+        label='Full output',
+        placeholder='false',
+        default='false',
         required=True,
     )
 
@@ -85,7 +94,8 @@ class RenameChatModal2(SettingsModal, title='Rename chat settings (2)'):
 
     def __init__(self, bot: Bot):
         super().__init__(bot)
-        self.current_streak.default = str(bot.settings.rename_chat.current_streak)
+        self.keep_messages.default = bot.settings.rename_chat.keep_messages
+        self.ephemeral_messages.default = bot.settings.rename_chat.ephemeral_messages
         self.target_channel_id.default = str(bot.settings.rename_chat.target_channel_id)
         self.loading_role_id.default = str(bot.settings.rename_chat.loading_role_id)
         self.special_role_id.default = str(bot.settings.rename_chat.special_role_id)
@@ -94,7 +104,8 @@ class RenameChatModal2(SettingsModal, title='Rename chat settings (2)'):
         settings = self.bot.settings.trigger_words
         adapter = TypeAdapter(int)
 
-        settings.current_streak = adapter.validate_strings(self.current_streak.value)
+        settings.keep_messages = TypeAdapter(bool).validate_strings(self.keep_messages.value)
+        settings.ephemeral_messages = TypeAdapter(bool).validate_strings(self.ephemeral_messages.value)
         settings.target_channel_id = adapter.validate_strings(self.target_channel_id.value)
         settings.loading_role_id = adapter.validate_strings(self.loading_role_id.value)
         settings.special_role_id = adapter.validate_strings(self.special_role_id.value)

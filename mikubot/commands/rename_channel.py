@@ -1,5 +1,6 @@
 from discord import Interaction
 from discord.app_commands import describe, checks, AppCommandError
+from loguru import logger
 from mikubot import Bot
 import random
 import asyncio
@@ -33,10 +34,11 @@ def register(bot: Bot):
             return
 
         is_special = interaction.user.get_role(settings.special_role_id)
+
         await interaction.user.add_roles(loading_role)
 
         async with interaction.channel.typing():
-            await interaction.response.send_message('🎲 Rolling a random number.')  # noqa
+            await interaction.response.send_message('🎲 Rolling a random number.', ephemeral=settings.ephemeral_messages)  # noqa
             message = await interaction.original_response()
 
             await asyncio.sleep(settings.roll_time / 3.0)
@@ -51,44 +53,54 @@ def register(bot: Bot):
 
             if success:
                 # Rename channel
-                postfix = settings.lowest_postfix() or ''
-                settings.current_streak = 0
-                # Save streak counter
-                bot.settings.save()
+                with bot.storage('brazil', autocommit=True) as db:
+                    postfix = settings.lowest_postfix(db.get('streak', 0)) or '.'
+
+                    # Reset fail streak
+                    db['streak'] = 0
+
                 await target_channel.edit(name=newname)
 
                 rename_message = f'🎉 The channel has been renamed to **{newname}** by {interaction.user.mention}! They rolled {rolled}{postfix}'
                 await message.edit(content=rename_message)  # noqa
                 await interaction.user.remove_roles(loading_role)
+
+                if not settings.keep_messages:
+                    await message.delete(delay=settings.deletion_delay)
+
                 return
-            else:
-                # Failure
-                settings.current_streak += 1
-                # Save streak counter
-                bot.settings.save()
 
-                new_role = special_brazil_role if is_special else brazil_role
+            # Failure
+            new_role = special_brazil_role if is_special else brazil_role
 
-                fail_message = f'<:PokeOff:1274829050648465428> {interaction.user.mention} will be sent to Brazil! They rolled {rolled}.'
+            # Save streak counter
+            with bot.storage('brazil', autocommit=True) as db:
+                current_streak = db.get('streak', 0) + 1
+                db['streak'] = current_streak
 
-                if settings.current_streak > 8:
-                    fail_message += f'\n{settings.current_streak} failed rolls in a row!'
+            fail_message = f'<:PokeOff:1274829050648465428> {interaction.user.mention} will be sent to Brazil! They rolled {rolled}.'
+            fail_message_postfix = f'\n{current_streak} failed rolls in a row!'
 
-                await message.edit(content=fail_message)  # noqa
-                await asyncio.sleep(settings.failure_delay)
-                await interaction.user.add_roles(new_role)
-                await interaction.user.remove_roles(member_role, loading_role)
+            if current_streak > 8:
+                fail_message += fail_message_postfix
 
-                if is_special:
-                    await interaction.user.remove_roles(special_role)
+            await message.edit(content=fail_message)  # noqa
+            await asyncio.sleep(settings.failure_delay)
+            await interaction.user.add_roles(new_role)
+            await interaction.user.remove_roles(member_role, loading_role)
 
-                fail_message = f'<:PokeOff:1274829050648465428> {interaction.user.mention} has been sent to Brazil! They rolled {rolled}.'
+            if is_special:
+                await interaction.user.remove_roles(special_role)
 
-                if settings.current_streak > 8:
-                    fail_message += f'\n{settings.current_streak} failed rolls in a row!'
+            fail_message = f'<:PokeOff:1274829050648465428> {interaction.user.mention} has been sent to Brazil! They rolled {rolled}.'
 
-                await message.edit(content=fail_message)  # noqa
+            if current_streak > 8:
+                fail_message += fail_message_postfix
 
+            await message.edit(content=fail_message)  # noqa
+
+            if not settings.keep_messages:
+                await message.delete(delay=settings.deletion_delay)
 
         # Retrieval logic
         delay = settings.random_delay()
@@ -106,11 +118,19 @@ def register(bot: Bot):
             if len(settings.retrieval_messages):
                 retrieval_message = random.choice(settings.retrieval_messages).format(
                     user=interaction.user.mention,
-                    delay=int(delay / 60.0)
+                    delay=int(delay // 60.0),
                 )
 
-                await interaction.channel.send(retrieval_message)
+                if settings.single_message:
+                    new_content = f'{fail_message}\n────────────────────────────────────────\n{retrieval_message}'
+                    message = await interaction.original_response()
+                    await message.edit(content=new_content)
+                else:
+                    await interaction.channel.send(
+                        retrieval_message,
+                        delete_after=None if settings.keep_messages else settings.deletion_delay,
+                    )
 
     @handler.error
     async def error_handler(interaction: Interaction, error: AppCommandError):
-        await interaction.response.send_message(str(error), ephemeral=True)  # noqa
+        logger.exception(error)

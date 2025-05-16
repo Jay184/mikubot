@@ -167,5 +167,8 @@ cython_debug/
 logs/
 token.txt
 settings.json
+
+# Databases
 storage.sqlite
 zoe.sqlite
+stocks.sqlite

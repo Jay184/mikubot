@@ -1,6 +1,8 @@
 import logging
 from loguru import logger
 
+from .config import LoggingSettings
+
 
 class InterceptHandler(logging.Handler):
     """Intercepts the standard logging module and replaces log messages with loguru logs."""
@@ -33,10 +35,10 @@ class InterceptHandler(logging.Handler):
         ).log(level, record.getMessage())
 
 
-def setup_logger():
+def setup_logger(settings: LoggingSettings):
     logger.add(
-        'logs/log_{time}.log',
-        rotation='500 MB',
-        retention='10 days',
+        settings.file_path,
+        rotation=settings.rotation,
+        retention=settings.retention,
         compression='zip',
     )

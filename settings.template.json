@@ -1,6 +1,15 @@
 {
     "storageFile": "storage.sqlite",
-    "loggingChannelId": 1000,
+    "logging": {
+        "filePath": "logs/log.txt",
+        "rotation": "500 MB",
+        "retention": "10 days",
+        "channelId": 1000,
+        "excludedUsers": [
+            5665,
+            6556
+        ]
+    },
     "triggerWords": {
         "enabled": true,
         "allowThreads": true,
@@ -22,7 +31,10 @@
         "failureDelay": 3.0,
         "minMinutes": 3.0,
         "maxMinutes": 60.0,
-        "currentStreak": 0,
+        "keepMessages": true,
+        "deletionDelay": 5.0,
+        "singleMessage": true,
+        "ephemeralMessages": false,
         "targetChannelId": 1112,
         "loadingRoleId": 1113,
         "specialRoleId": 1114,
@@ -144,6 +156,7 @@
         "databaseFile": "zoe.sqlite",
         "userId": 42069,
         "scanEnabled": true,
+        "fallbackLimit": 100,
         "channels": {
             "public": [
                 11111,
@@ -158,5 +171,37 @@
                 22222
             ]
         }
+    },
+    "stockMarket": {
+        "enabled": false,
+        "requiredRole": 9753,
+        "marketFile": "stocks.sqlite",
+        "marketMakerId": 9988,
+        "interestRate": 0.01,
+        "orderFee": 0.50,
+        "orderFeeRate": 0.00,
+        "openTime": "07:30:00",
+        "closeTime": "23:00:00",
+        "executorInterval": 5.0,
+        "hidePortfolioSecurities": true,
+        "startingSecurities": [
+            {
+                "key": "DOGE",
+                "name": "Example Commodity",
+                "price": 112.65,
+                "base_spread": 0.001,
+                "liquidityStrategy": {
+                  "type": "transaction_count",
+                  "window": 300
+                },
+                "volatilityStrategy": {
+                  "type": "last_n",
+                  "amount": 10
+                },
+                "priceUpdateStrategy": {
+                  "type": "last_trade_price"
+                }
+            }
+        ]
     }
 }

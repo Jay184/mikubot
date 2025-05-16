@@ -6,7 +6,7 @@ from .base import SettingsModal, Bot
 
 class BrazilModal(SettingsModal, title='Brazil settings'):
     brazil_role_id = TextInput(
-        label='Current streak',
+        label='Brazil role ID',
         required=True,
     )
 

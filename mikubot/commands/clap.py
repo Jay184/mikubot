@@ -10,10 +10,10 @@ def register(bot: Bot):
     @describe(text='The text you want to add claps to.')
     async def handler(interaction: Interaction, text: str):
         text = re.sub(r'\s+', ' 👏 ', text)
-        await interaction.response.send_message(text)  # noqa
+        await interaction.response.send_message(text[:2000])  # noqa
 
     @bot.tree.context_menu(name='clap')
     @checks.bot_has_permissions(send_messages=True)
     async def context_handler(interaction: Interaction, message: Message):
         text = re.sub(r'\s+', ' 👏 ', message.content)
-        await interaction.response.send_message(text, allowed_mentions=None)  # noqa
+        await interaction.response.send_message(text[:2000], allowed_mentions=None)  # noqa

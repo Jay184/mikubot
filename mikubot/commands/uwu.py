@@ -23,10 +23,10 @@ def register(bot: Bot):
     @describe(text='The text you want to uwu-ify.')
     async def handler(interaction: Interaction, text: str):
         text = create_uwufier(interaction.channel).uwuify(text)
-        await interaction.response.send_message(text, allowed_mentions=None)  # noqa
+        await interaction.response.send_message(text[:2000])  # noqa
 
     @bot.tree.context_menu(name='uwufy')
     @checks.bot_has_permissions(send_messages=True)
     async def context_handler(interaction: Interaction, message: Message):
         text = create_uwufier(interaction.channel).uwuify(message.content)
-        await interaction.response.send_message(text, allowed_mentions=None)  # noqa
+        await interaction.response.send_message(text[:2000], allowed_mentions=None)  # noqa

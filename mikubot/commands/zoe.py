@@ -1,11 +1,34 @@
 import msgpack
 import random
-from discord import Interaction, Embed
-from discord.app_commands import checks
-from mikubot import Bot
-from sqlitedict import SqliteDict
 from datetime import datetime
+from urllib.parse import urlparse
+from discord import Interaction, Message, Embed
+from discord.errors import NotFound
+from discord.app_commands import checks
+from sqlitedict import SqliteDict
 from loguru import logger
+from emoji import purely_emoji
+from mikubot import Bot
+
+
+def purely_url(s: str) -> bool:
+    if not len(s):
+        return False
+
+    words = s.split()
+    urls = []
+
+    for word in words:
+        parsed = urlparse(word)
+        if parsed.scheme and parsed.netloc:
+            urls.append(word)
+
+    return len(words) == len(urls)
+
+
+def is_valid(message: Message) -> bool:
+    text = message.content.strip()
+    return len(text) > 0 and not purely_emoji(text) and not purely_url(text)
 
 
 async def scan_messages(bot: Bot):
@@ -37,10 +60,16 @@ async def scan_messages(bot: Bot):
 
         unsaved = 0
         last = last_messages.get(str(channel.id))
-        last_message = await channel.fetch_message(last) if last else None
+        limit = None
 
-        async for message in channel.history(limit=None, after=last_message):
-            if message.author.id == bot.settings.zoe.user_id:
+        try:
+            last_message = await channel.fetch_message(last) if last else None
+        except NotFound:
+            last_message = None
+            limit = bot.settings.zoe.fallback_limit
+
+        async for message in channel.history(limit=limit, after=last_message):
+            if message.author.id == bot.settings.zoe.user_id and is_valid(message):
                 data = {
                     'user': message.author.id,
                     'channel': message.channel.id,
@@ -88,11 +117,14 @@ def register(bot: Bot):
                 message = random.choice(list(db.values()))
 
             jump_url = message.get('link')
+            text = message.get('content')
+
+            if len(text) > 256:
+                text = text[:253] + '...'
 
             embed = Embed(
-                title=f'Link',
-                description=message.get('content'),
-                url=jump_url,
+                title=text,
+                description=f'[Source]({jump_url})',
                 timestamp=datetime.fromtimestamp(message.get('ts')),
                 color=0xff0000,
             )

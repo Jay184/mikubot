@@ -7,6 +7,6 @@ if __name__ == '__main__':
     settings = Settings.load()
 
     if settings.discord_key:
-        setup_logger()
+        setup_logger(settings.logging)
         client = Bot(settings)
         client.run(settings.discord_key)

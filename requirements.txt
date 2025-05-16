@@ -13,3 +13,5 @@ pefile
 sqlitedict
 msgpack
 loguru
+pandas
+matplotlib
