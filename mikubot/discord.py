@@ -4,7 +4,7 @@ import msgpack
 from loguru import logger
 from sqlitedict import SqliteDict
 from datetime import datetime, timezone
-from discord import Client, Intents, Message, Thread, Member, Guild, User, Embed
+from discord import Client, Intents, Message, Thread, Member, User, Guild, Embed
 from discord import Activity, ActivityType, AuditLogAction
 from discord.utils import MISSING
 from discord.app_commands import CommandTree
@@ -66,8 +66,8 @@ class Bot(Client):
         if not settings.allow_threads and isinstance(message.channel, Thread):
             return
 
-        is_ignored = message.author.get_role(settings.ignored_role_id)
-        if message.author and is_ignored:
+        is_ignored = isinstance(message.author, Member) and message.author.get_role(settings.ignored_role_id)
+        if is_ignored:
             logger.info(f'{message.author.display_name} ignored due to role.')
             return
 
@@ -244,6 +244,7 @@ class Bot(Client):
         commands.wrongfolder.register(self)
         commands.you_are_going_to_brazil.register(self)
         commands.zoe.register(self)
+        commands.guess.register(self)
         register_stock_market(self)
 
         if self.settings.market.enabled:
@@ -303,7 +304,7 @@ class Bot(Client):
 
     @contextmanager
     def storage(self, table: str = None, *, autocommit: bool = False):
-        table = table or '__unnamed__'
+        table = table or "__unnamed__"
 
         try:
             yield SqliteDict(

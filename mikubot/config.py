@@ -129,6 +129,12 @@ class ZoeQuotesSettings(MikuBotBaseModel):
     channels: ZoeChannelSettings = ZoeChannelSettings()
 
 
+class GuessingGameSettings(MikuBotBaseModel):
+    emoji_pool: list[str]
+    sequence_length: int = 4
+    max_duplicates: int = 2
+
+
 class StockMarketSettings(MikuBotBaseModel):
     enabled: bool = False
     required_role: int
@@ -175,6 +181,7 @@ class Settings(BaseSettings):
     mm_code: MegaMixCodeSettings
     zoe: ZoeQuotesSettings
     market: StockMarketSettings
+    guessing_game: GuessingGameSettings
 
     @staticmethod
     def file_path() -> str:
@@ -187,5 +194,4 @@ class Settings(BaseSettings):
     @classmethod
     def load(cls) -> Self:
         with open(cls.file_path(), mode='r', encoding='utf-8') as f:
-            data = json.load(f)
-            return cls.model_validate(data)
+            return cls.model_validate_json(f.read())

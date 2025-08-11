@@ -203,5 +203,10 @@
                 }
             }
         ]
+    },
+    "guessingGame": {
+        "emojiPool": ["🟥", "🟩", "🟦", "🟨", "🟧", "🟪", "⬛", "⬜"],
+        "sequenceLength": 4,
+        "maxDuplicates": 2
     }
 }

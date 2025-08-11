@@ -102,7 +102,7 @@ def register(bot: Bot):
     @checks.bot_has_permissions(send_messages=True)
     async def handler(interaction: Interaction):
         zoe = await bot.fetch_user(bot.settings.zoe.user_id)
-        is_public = interaction.channel_id in bot.settings.zoe.channels.public
+        is_public = interaction.channel_id not in bot.settings.zoe.channels.private
 
         with SqliteDict(
             bot.settings.zoe.database_file,
@@ -112,9 +112,10 @@ def register(bot: Bot):
             decode=msgpack.loads,
             outer_stack=False,
         ) as db:
-            message = random.choice(list(db.values()))
-            while not message.get('public') and is_public:
-                message = random.choice(list(db.values()))
+            messages = list(db.values())
+            message = random.choice(messages)
+            while is_public and not message.get('public'):
+                message = random.choice(messages)
 
             jump_url = message.get('link')
             text = message.get('content')
