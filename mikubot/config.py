@@ -1,10 +1,9 @@
 from typing import Self
 from datetime import time
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 import os
-import json
 import random
 import re
 
@@ -24,7 +23,7 @@ class MikuBotBaseModel(BaseModel):
 class MegaMixCodeSettings(MikuBotBaseModel):
     max_length: int = 0x80
     allowed_role: int
-    binaries: list[str] = []
+    binaries: list[str] = Field(default_factory=list)
 
 
 class UwufySettings(MikuBotBaseModel):
@@ -33,7 +32,7 @@ class UwufySettings(MikuBotBaseModel):
     action_chance: float = 0.5
     exclamation_chance: float = 0.95
     nsfw_actions: bool = False
-    nsfw_channels: list[int] = []
+    nsfw_channels: list[int] = Field(default_factory=list)
     power: int = 3
 
 
@@ -69,8 +68,8 @@ class RenameChatSettings(MikuBotBaseModel):
     loading_role_id: int
     special_role_id: int
 
-    streak_postfixes: dict[int, str] = {}
-    retrieval_messages: list[str] = []
+    streak_postfixes: dict[int, str] = Field(default_factory=dict)
+    retrieval_messages: list[str] = Field(default_factory=list)
 
     def lowest_postfix(self, streak: int) -> str | None:
         keys = sorted(self.streak_postfixes.keys(), reverse=True)
@@ -85,24 +84,32 @@ class RenameChatSettings(MikuBotBaseModel):
         return (value * minutes_range + self.min_minutes) * 60.0
 
 
-class TriggerWord(MikuBotBaseModel):
-    model_config = ConfigDict(
-        extra='allow',
-    )
+class TriggerWordReply(MikuBotBaseModel):
+    text: str
+    weight: int = 1
 
+
+class TriggerWord(MikuBotBaseModel):
     pattern: str
-    reply: str
+    replies: list[TriggerWordReply] = Field(default_factory=list)
+    text: str | None = None
 
     def triggered(self, text: str) -> bool:
         match = re.search(self.pattern, text, re.IGNORECASE)
         return match is not None
 
-    def get_reply(self) -> str:
-        if 'secretChance' in self.model_extra and 'secretText' in self.model_extra:
-            if random.random() < self.model_extra['secretChance']:
-                return self.model_extra['secretText']
+    def get_reply(self) -> str | None:
+        all_texts = [reply.text for reply in self.replies]
+        all_weights = [reply.weight for reply in self.replies]
 
-        return self.reply
+        if self.text:
+            all_texts.append(self.text)
+            all_weights.append(sum(all_weights) or 1)
+
+        if len(all_texts) == len(all_weights) and all_texts and any(all_weights):
+            return random.choices(all_texts, all_weights, k=1)[0]
+
+        return None
 
 
 class TriggerWordSettings(MikuBotBaseModel):
@@ -117,8 +124,8 @@ class TriggerWordSettings(MikuBotBaseModel):
 
 
 class ZoeChannelSettings(MikuBotBaseModel):
-    public: list[int] = []
-    private: list[int] = []
+    public: list[int] = Field(default_factory=list)
+    private: list[int] = Field(default_factory=list)
 
 
 class ZoeQuotesSettings(MikuBotBaseModel):
@@ -148,7 +155,7 @@ class StockMarketSettings(MikuBotBaseModel):
     close_time: time = time(23, 0, 0)
     executor_interval: float = 5.0
     hide_portfolio_securities: bool = False
-    starting_securities: list[Security] = []
+    starting_securities: list[Security] = Field(default_factory=list)
 
 
 class LoggingSettings(MikuBotBaseModel):
@@ -156,7 +163,7 @@ class LoggingSettings(MikuBotBaseModel):
     rotation: str = '500 MB',
     retention: str = '10 days'
     channel_id: int
-    excluded_users: list[int] = []
+    excluded_users: list[int] = Field(default_factory=list)
 
 
 class Settings(BaseSettings):

@@ -18,7 +18,20 @@
         "triggers": [
             {
                 "pattern": "\\bass\\b",
-                "reply": "https://cdn.discordapp.com/attachments/421865513820618752/1071615776127201424/169F55F1-C038-41DD-9264-BD3D9E8C6D60.gif"
+                "text": "https://cdn.discordapp.com/attachments/421865513820618752/1071615776127201424/169F55F1-C038-41DD-9264-BD3D9E8C6D60.gif"
+            },
+            {
+                "pattern": "sorry miku\\s*bot",
+                "replies": [
+                    {
+                        "text": "Apolocheese accepted!",
+                        "weight": 75
+                    },
+                    {
+                        "text": "Apolocheese NOT accepted!",
+                        "weight": 25
+                    }
+                ]
             }
         ],
         "teamChat1Id": 9999,

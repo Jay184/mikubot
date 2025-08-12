@@ -80,7 +80,12 @@ class Bot(Client):
 
         for trigger in settings.triggers:
             if trigger.triggered(message.content):
-                await message.reply(trigger.get_reply())
+                reply_text = trigger.get_reply()
+
+                if not reply_text:
+                    continue
+
+                await message.reply(reply_text)
 
                 with self.storage(table='statistics.triggers', autocommit=True) as db:
                     key = f'{message.author.id}::{trigger.pattern}'
@@ -245,6 +250,7 @@ class Bot(Client):
         commands.you_are_going_to_brazil.register(self)
         commands.zoe.register(self)
         commands.guess.register(self)
+        commands.goofy_translate.register(self)
         register_stock_market(self)
 
         if self.settings.market.enabled:

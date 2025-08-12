@@ -1,5 +1,5 @@
 from discord import Interaction
-from discord.app_commands import describe, checks, AppCommandError
+from discord.app_commands import describe, checks, AppCommandError, CommandOnCooldown
 from loguru import logger
 from mikubot import Bot
 import random
@@ -133,4 +133,9 @@ def register(bot: Bot):
 
     @handler.error
     async def error_handler(interaction: Interaction, error: AppCommandError):
+        if isinstance(error, CommandOnCooldown):
+            await interaction.response.send_message(  # noqa
+                f"{round(error.retry_after, 2)} seconds left"
+            )
+
         logger.exception(error)
