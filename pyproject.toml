@@ -1,0 +1,26 @@
+[project]
+name = "mikubot"
+version = "0.1.0"
+description = "Bot used for the Eden Project discord server."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "capstone>=5.0.6",
+    "discord-py>=2.6.3",
+    "emoji>=2.14.1",
+    "googletrans>=4.0.2",
+    "jinja2>=3.1.6",
+    "loguru>=0.7.3",
+    "matplotlib>=3.10.6",
+    "msgpack>=1.1.1",
+    "pandas>=2.3.2",
+    "pefile>=2024.8.26",
+    "pillow>=11.3.0",
+    "pydantic>=2.11.9",
+    "pydantic-settings>=2.10.1",
+    "requests>=2.32.5",
+    "requests-sse>=0.5.2",
+    "rich>=14.1.0",
+    "sqlitedict>=2.1.0",
+    "uwuipy>=0.1.10",
+]
