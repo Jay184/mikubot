@@ -4,29 +4,29 @@ from pydantic import TypeAdapter
 from .base import SettingsModal, Bot
 
 
-class UwufyModal(SettingsModal, title='Uwufy settings'):
+class UwufyModal(SettingsModal, title="Uwufy settings"):
     stutter_chance = TextInput(
-        label='Stutter chance',
+        label="Stutter chance",
         required=True,
     )
 
     face_chance = TextInput(
-        label='Face face',
+        label="Face face",
         required=True,
     )
 
     action_chance = TextInput(
-        label='Action chance',
+        label="Action chance",
         required=True,
     )
 
     exclamation_chance = TextInput(
-        label='Exclamation chance',
+        label="Exclamation chance",
         required=True,
     )
 
     power = TextInput(
-        label='Power',
+        label="Power",
         required=True,
     )
 

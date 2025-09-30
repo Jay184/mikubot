@@ -1,74 +1,88 @@
-from typing import Self
+from typing import Self, Annotated
 from datetime import time
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import PositiveInt, NonNegativeInt, PositiveFloat, NonNegativeFloat
 from pydantic.alias_generators import to_camel
 import os
 import random
 import re
 
-from .stocks import Security
+from .stocks.models import SecurityConfig
+
+
+type Probability = Annotated[float, Field(strict=True, ge=0, le=1)]
+type NonEmptyString = Annotated[str, Field(min_length=1)]
 
 
 class MikuBotBaseModel(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,
-        validate_by_alias=True,  # Allows 'timeOfDay' to fill 'time_of_day'
-        serialize_by_alias=True,  # Serializes 'time_of_day' to 'timeOfDay'
+        validate_by_alias=True,  # Allows "timeOfDay" to fill "time_of_day"
+        serialize_by_alias=True,  # Serializes "time_of_day" to "timeOfDay"
         alias_generator=to_camel,
-        extra='ignore',
+        extra="ignore",
     )
 
 
 class MegaMixCodeSettings(MikuBotBaseModel):
-    max_length: int = 0x80
-    allowed_role: int
-    binaries: list[str] = Field(default_factory=list)
+    max_length: Annotated[int, Field(gt=0, le=0xFFFF, strict=True)] = 0x80
+    allowed_role: PositiveInt
+    binaries: Annotated[list[Path], Field(min_items=4, max_items=4, description="Exactly 4 paths to .exe binaries")]
+
+    @field_validator("binaries", mode="after")  # noqa
+    @classmethod
+    def check_exe_suffix(cls, v: list[Path]) -> list[Path]:
+        for path in v:
+            if path.suffix.lower() != ".exe":
+                raise ValueError(f"Invalid binary path '{path}': must end with .exe")
+        return v
 
 
 class UwufySettings(MikuBotBaseModel):
-    stutter_chance: float = 0.09
-    face_chance: float = 0.03
-    action_chance: float = 0.5
-    exclamation_chance: float = 0.95
+    stutter_chance: Probability = 0.09
+    face_chance: Probability = 0.03
+    action_chance: Probability = 0.5
+    exclamation_chance: Probability = 0.95
     nsfw_actions: bool = False
-    nsfw_channels: list[int] = Field(default_factory=list)
-    power: int = 3
+    nsfw_channels: list[PositiveInt] = Field(default_factory=list)
+    power: PositiveInt = 3
 
 
 class GamebananaSearchSettings(MikuBotBaseModel):
-    limit: int = 10
+    limit: PositiveInt = 10
     full: bool = True
 
 
 class ChoosableRoleSettings(MikuBotBaseModel):
-    roles: dict[str, int]
+    roles: dict[NonEmptyString, PositiveInt]
 
 
 class BrazilSettings(MikuBotBaseModel):
-    brazil_role_id: int
-    special_brazil_role_id: int
-    member_role_id: int
-    team_role_id: int
+    brazil_role_id: PositiveInt
+    special_brazil_role_id: PositiveInt
+    member_role_id: PositiveInt
+    team_role_id: PositiveInt
 
 
 class RenameChatSettings(MikuBotBaseModel):
-    success_chance: float = 0.02
-    roll_time: float = 3.0
-    failure_delay: float = 3.0
-    min_minutes: float = 3.0
-    max_minutes: float = 60
+    success_chance: Probability = 0.02
+    roll_time: NonNegativeFloat = 3.0
+    failure_delay: NonNegativeFloat = 3.0
+    min_minutes: PositiveFloat = 3.0
+    max_minutes: PositiveFloat = 60.0
 
     keep_messages: bool = True
-    deletion_delay: float = 5.0
+    deletion_delay: NonNegativeFloat = 5.0
     single_message: bool = True
     ephemeral_messages: bool = False
 
-    target_channel_id: int
-    loading_role_id: int
-    special_role_id: int
+    target_channel_id: PositiveInt
+    loading_role_id: PositiveInt
+    special_role_id: PositiveInt
 
-    streak_postfixes: dict[int, str] = Field(default_factory=dict)
+    streak_postfixes: dict[PositiveInt, str] = Field(default_factory=dict)
     retrieval_messages: list[str] = Field(default_factory=list)
 
     def lowest_postfix(self, streak: int) -> str | None:
@@ -86,11 +100,11 @@ class RenameChatSettings(MikuBotBaseModel):
 
 class TriggerWordReply(MikuBotBaseModel):
     text: str
-    weight: int = 1
+    weight: NonNegativeInt = 1
 
 
 class TriggerWord(MikuBotBaseModel):
-    pattern: str
+    pattern: NonEmptyString
     replies: list[TriggerWordReply] = Field(default_factory=list)
     text: str | None = None
 
@@ -116,54 +130,77 @@ class TriggerWordSettings(MikuBotBaseModel):
     enabled: bool = True
     allow_threads: bool = True
     allow_multiple: bool = False
-    ignored_role_id: int
+    ignored_role_id: PositiveInt
     triggers: list[TriggerWord]
-    team_chat_1_id: int
-    team_chat_2_id: int
+    team_chat_1_id: PositiveInt
+    team_chat_2_id: PositiveInt
     team_trigger: str
 
 
 class ZoeChannelSettings(MikuBotBaseModel):
-    public: list[int] = Field(default_factory=list)
-    private: list[int] = Field(default_factory=list)
+    public: list[PositiveInt] = Field(default_factory=list)
+    private: list[PositiveInt] = Field(default_factory=list)
 
 
 class ZoeQuotesSettings(MikuBotBaseModel):
-    database_file: str
-    user_id: int
+    database_file: Path
+    user_id: PositiveInt
     scan_enabled: bool = True
-    fallback_limit: int = 100
+    fallback_limit: PositiveInt = 100
     channels: ZoeChannelSettings = ZoeChannelSettings()
 
 
 class GuessingGameSettings(MikuBotBaseModel):
-    emoji_pool: list[str]
-    sequence_length: int = 4
-    max_duplicates: int = 2
+    emoji_pool: Annotated[list[NonEmptyString], Field(min_length=1)]
+    sequence_length: Annotated[int, Field(ge=2, lt=10)] = 4
+    max_duplicates: NonNegativeInt = 2
 
 
 class StockMarketSettings(MikuBotBaseModel):
     enabled: bool = False
-    required_role: int
-    market_file: str
-    market_maker_id: int
-    interest_rate: float = 0.01
-    order_fee: float = 0.99
-    order_fee_rate: float = 0.00
-    starting_credit: float = 100.0
+    required_role: PositiveInt | None = None
+    admins: list[PositiveInt] = Field(default_factory=list)
+    market_file: Path
+    market_maker_id: PositiveInt | None = None
+    interest_rate: NonNegativeFloat = 0.01
+    order_fee: NonNegativeFloat = 0.99
+    order_fee_rate: NonNegativeFloat = 0.00
+    starting_credit: NonNegativeFloat = 100.0
     open_time: time = time(7, 30, 0)
     close_time: time = time(23, 0, 0)
-    executor_interval: float = 5.0
+    executor_interval: PositiveFloat = 5.0
+    remote_update_interval: PositiveFloat = 3600.0
+    local_update_interval: PositiveFloat = 60.0
     hide_portfolio_securities: bool = False
-    starting_securities: list[Security] = Field(default_factory=list)
+    securities: list[SecurityConfig] = Field(default_factory=list)
+
+    @field_validator("securities", mode="after")  # noqa
+    @classmethod
+    def check_unique_tickers(cls, v: list[SecurityConfig]) -> list[SecurityConfig]:
+        seen = set()
+        unique_securities = []
+
+        for sec in v:
+            if sec.key not in seen:
+                seen.add(sec.key)
+                unique_securities.append(sec)
+            else:
+                # Optional: log warning
+                #print(f"⚠️ Duplicate security key '{sec.key}' found — ignoring duplicate.")
+                ...
+
+        return unique_securities
 
 
 class LoggingSettings(MikuBotBaseModel):
-    file_path: str = 'log.log'
-    rotation: str = '500 MB',
-    retention: str = '10 days'
-    channel_id: int
-    excluded_users: list[int] = Field(default_factory=list)
+    file_path: Path = "logs/{time:YYYY-MM-DD}.log"
+    rotation: str = "500 MB"
+    retention: str = "10 days"
+    level: NonNegativeInt | str = "INFO"
+    backtrace: bool = False
+    diagnose: bool = False
+    channel_id: PositiveInt
+    excluded_users: list[PositiveInt] = Field(default_factory=list)
 
 
 class Settings(BaseSettings):
@@ -172,12 +209,13 @@ class Settings(BaseSettings):
         from_attributes=True,
         populate_by_name=True,
         alias_generator=to_camel,
-        env_prefix='mikubot_',
-        extra='ignore'
+        env_prefix="mikubot_",
+        extra="ignore"
     )
 
     discord_key: str = None
-    storage_file: str
+    storage_file: Path
+    sync_commands: bool = True
     logging: LoggingSettings
     trigger_words: TriggerWordSettings
     rename_chat: RenameChatSettings
@@ -192,13 +230,13 @@ class Settings(BaseSettings):
 
     @staticmethod
     def file_path() -> str:
-        return os.environ.get('MIKUBOT_SETTINGS_FILE', 'settings.json')
+        return os.environ.get("MIKUBOT_SETTINGS_FILE", "settings.json")
 
     def save(self):
-        with open(self.file_path(), mode='w', encoding='utf-8') as f:
-            f.write(self.model_dump_json(indent=4, by_alias=True, exclude={'discord_key'}))
+        with open(self.file_path(), mode="w", encoding="utf-8") as f:
+            f.write(self.model_dump_json(indent=4, by_alias=True, exclude={"discord_key"}))
 
     @classmethod
     def load(cls) -> Self:
-        with open(cls.file_path(), mode='r', encoding='utf-8') as f:
+        with open(cls.file_path(), mode="r", encoding="utf-8") as f:
             return cls.model_validate_json(f.read())

@@ -4,8 +4,8 @@ from mikubot import Bot
 
 
 def register(bot: Bot):
-    @bot.tree.command(name='downgrade', description='Downgrade tutorial')
+    @bot.tree.command(name="downgrade", description="Downgrade tutorial")
     @checks.bot_has_permissions(send_messages=True)
     async def handler(interaction: Interaction):
-        reply_text = 'https://gamebanana.com/tuts/15371'
+        reply_text = "https://gamebanana.com/tuts/15371"
         await interaction.response.send_message(reply_text)  # noqa

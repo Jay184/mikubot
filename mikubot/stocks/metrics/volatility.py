@@ -20,15 +20,15 @@ class VolatilityStrategy(ABC, BaseModel):
         cls._subtypes[cls.type] = cls
 
     @abstractmethod
-    def calculate(self, transactions: list['Transaction']) -> float:
+    def calculate(self, transactions: list["Transaction"]) -> float:
         return 0.0
 
 
 class LastNVolatility(VolatilityStrategy):
-    type: Literal['last_n'] = 'last_n'
+    type: Literal["last_n"] = "last_n"
     amount: int
 
-    def calculate(self, transactions: list['Transaction']) -> float:
+    def calculate(self, transactions: list["Transaction"]) -> float:
         if len(transactions) < self.amount + 1:
             return 0.0  # Not enough data
 
@@ -41,14 +41,14 @@ class LastNVolatility(VolatilityStrategy):
 
 
 class TimeWindowVolatility(VolatilityStrategy):
-    type: Literal['time_window'] = 'time_window'
+    type: Literal["time_window"] = "time_window"
     window: int | timedelta
 
     @property
     def window_seconds(self) -> int:
         return int(self.window.total_seconds()) if isinstance(self.window, timedelta) else self.window
 
-    def calculate(self, transactions: list['Transaction']) -> float:
+    def calculate(self, transactions: list["Transaction"]) -> float:
         window_start = current_timestamp().timestamp() - self.window_seconds
         filtered = [tx.price for tx in transactions if tx.execution_time.timestamp() >= window_start]
 
@@ -63,7 +63,7 @@ class TimeWindowVolatility(VolatilityStrategy):
 
 
 class HybridVolatility(VolatilityStrategy):
-    type: Literal['hybrid'] = 'hybrid'
+    type: Literal["hybrid"] = "hybrid"
     window: int | timedelta
     min_transactions: int
     fallback_n: int
@@ -72,7 +72,7 @@ class HybridVolatility(VolatilityStrategy):
     def window_seconds(self) -> int:
         return int(self.window.total_seconds()) if isinstance(self.window, timedelta) else self.window
 
-    def calculate(self, transactions: list['Transaction']) -> float:
+    def calculate(self, transactions: list["Transaction"]) -> float:
         window_start = current_timestamp().timestamp() - self.window_seconds
 
         # Get transactions in the window
@@ -98,7 +98,7 @@ class VolatilityCache:
         self._last_transaction_ids: list[uuid.UUID] = []
         self._cached_volatility: float = 0.0
 
-    def update(self, transactions: list['Transaction']) -> float:
+    def update(self, transactions: list["Transaction"]) -> float:
         current_ids = [tx.id for tx in transactions[-(self.strategy.n + 1):]] \
             if isinstance(self.strategy, LastNVolatility) else [tx.id for tx in transactions]
 

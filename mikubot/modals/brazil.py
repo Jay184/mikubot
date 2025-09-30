@@ -4,24 +4,24 @@ from pydantic import TypeAdapter
 from .base import SettingsModal, Bot
 
 
-class BrazilModal(SettingsModal, title='Brazil settings'):
+class BrazilModal(SettingsModal, title="Brazil settings"):
     brazil_role_id = TextInput(
-        label='Brazil role ID',
+        label="Brazil role ID",
         required=True,
     )
 
     special_brazil_role_id = TextInput(
-        label='Channel ID',
+        label="Channel ID",
         required=True,
     )
 
     member_role_id = TextInput(
-        label='Rolling role ID',
+        label="Rolling role ID",
         required=True,
     )
 
     team_role_id = TextInput(
-        label='"Special" role ID',
+        label="Team Role ID",
         required=True,
     )
 

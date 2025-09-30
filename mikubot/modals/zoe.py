@@ -4,21 +4,21 @@ from pydantic import TypeAdapter
 from .base import SettingsModal, Bot
 
 
-class ZoeQuoteModal(SettingsModal, title='Trigger word settings'):
+class ZoeQuoteModal(SettingsModal, title="Trigger word settings"):
     database_file = TextInput(
-        label='Database file',
+        label="Database file",
         required=True,
     )
 
     user_id = TextInput(
-        label='Zoe\'s user ID',
+        label="Zoe's user ID",
         required=True,
     )
 
     scan_enabled = TextInput(
-        label='Enable scanning',
-        placeholder='true',
-        default='true',
+        label="Enable scanning",
+        placeholder="true",
+        default="true",
         required=True,
     )
 

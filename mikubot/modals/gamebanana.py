@@ -4,18 +4,18 @@ from pydantic import TypeAdapter
 from .base import SettingsModal, Bot
 
 
-class GamebananaSearchModal(SettingsModal, title='Gamebanana search settings'):
+class GamebananaSearchModal(SettingsModal, title="Gamebanana search settings"):
     limit = TextInput(
-        label='Limit',
-        placeholder='10',
-        default='10',
+        label="Limit",
+        placeholder="10",
+        default="10",
         required=True,
     )
 
     full = TextInput(
-        label='Full output',
-        placeholder='true',
-        default='true',
+        label="Full output",
+        placeholder="true",
+        default="true",
         required=True,
     )
 

@@ -1,9 +1,13 @@
 {
     "storageFile": "storage.sqlite",
+    "syncCommands": true,
     "logging": {
         "filePath": "logs/log.txt",
         "rotation": "500 MB",
         "retention": "10 days",
+        "level": "INFO",
+        "backtrace": true,
+        "diagnose": true,
         "channelId": 1000,
         "excludedUsers": [
             5665,
@@ -64,7 +68,7 @@
             "61": ", dismantling a magnificent {streak} roll streak!",
             "51": ", tearing apart a fantastic {streak} roll streak!",
             "40": ", destroying a nut busting {streak} roll streak!",
-            "39": ", breaking an exactly 39 roll streak! Waww! Miku Would be proud!",
+            "39": ", breaking an exactly 39 roll streak! Wauw! Miku Would be proud!",
             "31": ", obliterating a colossal {streak} roll streak!",
             "21": ", shattering a {streak} roll streak!",
             "11": ", breaking a {streak} roll streak!"
@@ -188,6 +192,10 @@
     "stockMarket": {
         "enabled": false,
         "requiredRole": 9753,
+        "admins": [
+            1111,
+            2222
+        ],
         "marketFile": "stocks.sqlite",
         "marketMakerId": 9988,
         "interestRate": 0.01,
@@ -196,13 +204,28 @@
         "openTime": "07:30:00",
         "closeTime": "23:00:00",
         "executorInterval": 5.0,
+        "remoteUpdateInterval": 3600.0,
+        "localUpdateInterval": 60.0,
         "hidePortfolioSecurities": true,
-        "startingSecurities": [
+        "securities": [
             {
                 "key": "DOGE",
                 "name": "Example Commodity",
-                "price": 112.65,
+                "iconUrl": "https://ui-avatars.com/api/?background=random&color=random&name=Example+Commodity",
+                "startingPrice": 112.65,
                 "base_spread": 0.001,
+                "link": {
+                    "enabled": true,
+                    "remotes": ["GOOGL"],
+                    "multiplier": 1.0,
+                    "noise": 0.002,
+                    "derivativeRules": [
+                        {
+                            "type": "knockout",
+                            "threshold": 0.02
+                        }
+                    ]
+                },
                 "liquidityStrategy": {
                   "type": "transaction_count",
                   "window": 300

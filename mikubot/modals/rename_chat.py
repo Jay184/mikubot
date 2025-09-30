@@ -4,39 +4,39 @@ from pydantic import TypeAdapter
 from .base import SettingsModal, Bot
 
 
-class RenameChatModal1(SettingsModal, title='Rename chat settings (1)'):
+class RenameChatModal1(SettingsModal, title="Rename chat settings (1)"):
     success_chance = TextInput(
-        label='Success Chance',
-        placeholder='0.02',
-        default='0.02',
+        label="Success Chance",
+        placeholder="0.02",
+        default="0.02",
         required=True,
     )
 
     roll_time = TextInput(
-        label='Roll delay',
-        placeholder='3.0',
-        default='3.0',
+        label="Roll delay",
+        placeholder="3.0",
+        default="3.0",
         required=True,
     )
 
     failure_delay = TextInput(
-        label='Delay after failure',
-        placeholder='3.0',
-        default='3.0',
+        label="Delay after failure",
+        placeholder="3.0",
+        default="3.0",
         required=True,
     )
 
     min_minutes = TextInput(
-        label='Minimum minutes',
-        placeholder='3.0',
-        default='3.0',
+        label="Minimum minutes",
+        placeholder="3.0",
+        default="3.0",
         required=True,
     )
 
     max_minutes = TextInput(
-        label='Maximum minutes',
-        placeholder='60.0',
-        default='60.0',
+        label="Maximum minutes",
+        placeholder="60.0",
+        default="60.0",
         required=True,
     )
 
@@ -62,33 +62,33 @@ class RenameChatModal1(SettingsModal, title='Rename chat settings (1)'):
         await super().on_submit(interaction)
 
 
-class RenameChatModal2(SettingsModal, title='Rename chat settings (2)'):
+class RenameChatModal2(SettingsModal, title="Rename chat settings (2)"):
     keep_messages = TextInput(
-        label='Full output',
-        placeholder='true',
-        default='true',
+        label="Full output",
+        placeholder="true",
+        default="true",
         required=True,
     )
 
     ephemeral_messages = TextInput(
-        label='Full output',
-        placeholder='false',
-        default='false',
+        label="Full output",
+        placeholder="false",
+        default="false",
         required=True,
     )
 
     target_channel_id = TextInput(
-        label='Channel ID',
+        label="Channel ID",
         required=True,
     )
 
     loading_role_id = TextInput(
-        label='Rolling role ID',
+        label="Rolling role ID",
         required=True,
     )
 
     special_role_id = TextInput(
-        label='"Special" role ID',
+        label="Special role ID",
         required=True,
     )
 

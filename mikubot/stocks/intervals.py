@@ -3,10 +3,10 @@ from enum import Enum
 import matplotlib.dates as mdates
 
 
-class GraphInterval(str, Enum):
-    day = 'day'
-    week = 'week'
-    month = 'month'
+class SecurityIntervals(str, Enum):
+    day = "day"
+    week = "week"
+    month = "month"
 
 
 class IntervalData:

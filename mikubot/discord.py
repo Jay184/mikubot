@@ -11,7 +11,7 @@ from discord.app_commands import CommandTree
 from contextlib import contextmanager
 from .config import Settings
 from .logger import InterceptHandler
-from .stocks.market import Market
+from .stocks.core import Market
 
 
 class Bot(Client):
@@ -42,6 +42,8 @@ class Bot(Client):
         log_level: int = MISSING,
         root_logger: bool = False,
     ):
+        log_level = logger.level(self.settings.logging.level).no if log_level is MISSING else log_level
+
         return super().run(
             token,
             reconnect=reconnect,
@@ -52,8 +54,8 @@ class Bot(Client):
         )
 
     async def on_ready(self):
-        logger.info(f'Logged on as {self.user}!')
-        await self.change_presence(activity=Activity(type=ActivityType.listening, name='you'))
+        logger.info(f"Logged on as {self.user}!")
+        await self.change_presence(activity=Activity(type=ActivityType.listening, name="you"))
         await self.release_from_brazil()
 
     async def on_message(self, message: Message):
@@ -68,13 +70,13 @@ class Bot(Client):
 
         is_ignored = isinstance(message.author, Member) and message.author.get_role(settings.ignored_role_id)
         if is_ignored:
-            logger.info(f'{message.author.display_name} ignored due to role.')
+            logger.info(f"{message.author.display_name} ignored due to role.")
             return
 
         # Special trigger word in single channel
         if message.channel.id == settings.team_chat_1_id:
             if settings.team_trigger in message.content.lower():
-                reply_text = f'Go to <#{settings.team_chat_2_id}> pls.'
+                reply_text = f"Go to <#{settings.team_chat_2_id}> pls."
                 await message.reply(reply_text, delete_after=5.0)
                 return
 
@@ -87,8 +89,8 @@ class Bot(Client):
 
                 await message.reply(reply_text)
 
-                with self.storage(table='statistics.triggers', autocommit=True) as db:
-                    key = f'{message.author.id}::{trigger.pattern}'
+                with self.storage(table="statistics.triggers", autocommit=True) as db:
+                    key = f"{message.author.id}::{trigger.pattern}"
                     db[key] = db.get(key, 0) + 1
 
                 if not self.settings.trigger_words.allow_multiple:
@@ -103,7 +105,7 @@ class Bot(Client):
 
         embed = self.create_log_embed(
             message.author,
-            f'**Message deleted in <#{message.channel.id}>**\nID: `{message.id}`\n{message.content}',
+            f"**Message deleted in <#{message.channel.id}>**\nID: `{message.id}`\n{message.content}",
             color=0xff0000,
         )
 
@@ -122,17 +124,17 @@ class Bot(Client):
 
         embed = self.create_log_embed(
             before.author,
-            f'**[Message]({after.jump_url}) edit in <#{after.channel.id}>.**',
+            f"**[Message]({after.jump_url}) edit in <#{after.channel.id}>.**",
             color=0xffff00,
         )
 
         embed.add_field(
-            name='Original message',
+            name="Original message",
             value=before.content,
         )
 
         embed.add_field(
-            name='Edited message',
+            name="Edited message",
             value=after.content,
         )
 
@@ -145,7 +147,7 @@ class Bot(Client):
 
         embed = self.create_log_embed(
             member,
-            f'**{member.global_name} has joined the server!**\nUsers in server: {member.guild.member_count}',
+            f"**{member.global_name} has joined the server!**\nUsers in server: {member.guild.member_count}",
             color=0x00ff00,
         )
 
@@ -156,11 +158,11 @@ class Bot(Client):
         if member.id in self.settings.logging.excluded_users:
             return
 
-        role_list = ', '.join(r.name for r in member.roles)
+        role_list = ", ".join(r.name for r in member.roles)
 
         embed = self.create_log_embed(
             member,
-            f'**{member.global_name} has left the server!**\nRoles: {role_list}',
+            f"**{member.global_name} has left the server!**\nRoles: {role_list}",
             color=0xff0000,
         )
 
@@ -172,13 +174,13 @@ class Bot(Client):
             return
 
         log_entry = await anext(guild.audit_logs(action=AuditLogAction.ban))
-        log_message = f'**{user.global_name} has been banned from the server.**'
+        log_message = f"**{user.global_name} has been banned from the server.**"
 
         if log_entry.reason:
-            log_message += f'\nReason: {log_entry.reason}'
+            log_message += f"\nReason: {log_entry.reason}"
 
         if log_entry.user:
-            log_message += f'\nBy: {log_entry.user.mention}'
+            log_message += f"\nBy: {log_entry.user.mention}"
 
         embed = self.create_log_embed(
             user,
@@ -194,13 +196,13 @@ class Bot(Client):
             return
 
         log_entry = await anext(guild.audit_logs(action=AuditLogAction.unban))
-        log_message = f'**{user.global_name} has been unbanned from the server.**'
+        log_message = f"**{user.global_name} has been unbanned from the server.**"
 
         if log_entry.reason:
-            log_message += f'\nReason: {log_entry.reason}'
+            log_message += f"\nReason: {log_entry.reason}"
 
         if log_entry.user:
-            log_message += f'\nBy: {log_entry.user.mention}'
+            log_message += f"\nBy: {log_entry.user.mention}"
 
         embed = self.create_log_embed(
             user,
@@ -254,20 +256,21 @@ class Bot(Client):
         register_stock_market(self)
 
         if self.settings.market.enabled:
-            logger.info('Starting stock market.')
+            logger.info("Starting stock market.")
 
             if not self.market_executor:
-                self.market_executor = self.market.transaction_executor_loop(interval=self.settings.market.executor_interval)
+                self.market_executor = self.market.tx_engine.executor_loop(interval=self.settings.market.executor_interval)
                 asyncio.create_task(self.market_executor)
 
         if self.settings.zoe.scan_enabled:
-            logger.info('Scanning for Zoe messages.')
+            logger.info("Scanning for Zoe messages.")
             scan_task = commands.zoe.scan_messages(self)
             asyncio.create_task(scan_task)
 
-        # guild = await self.fetch_guild(1008898200184291389)
-        # synced_commands = await self.tree.sync()
-        # print(f'Synced {len(synced_commands)} commands.')
+        if self.settings.sync_commands:
+            # guild = await self.fetch_guild(1008898200184291389)
+            synced_commands = await self.tree.sync()
+            logger.info(f"Synced {len(synced_commands)} commands.")
 
     async def release_from_brazil(self):
         settings = self.settings.brazil
@@ -281,13 +284,13 @@ class Bot(Client):
             for member in brazil_role.members:
                 await member.remove_roles(brazil_role)
                 await member.add_roles(member_role)
-                logger.info(f'{member.display_name} has been retrieved from Brazil!')
+                logger.info(f"{member.display_name} has been retrieved from Brazil!")
 
             for member in special_brazil_role.members:
                 await member.remove_roles(special_brazil_role)
                 await member.add_roles(special_role)
                 await member.add_roles(member_role)
-                logger.info(f'{member.display_name} has been retrieved from Brazil!')
+                logger.info(f"{member.display_name} has been retrieved from Brazil!")
 
     def create_log_embed(self, subject: Member, description: str = None, *, color: int = None) -> Embed:
         embed = Embed(

@@ -161,7 +161,7 @@ def register(bot: Bot):
 
         if len(guess_emojis) != len(puzzle.solution):
             await interaction.response.send_message(  # noqa
-                f"You must enter exactly {len(puzzle.solution)} emojis from the allowed pool: {' '.join(puzzle.pool)}",
+                f"You must enter exactly {len(puzzle.solution)} emojis from the allowed pool: {" ".join(puzzle.pool)}",
                 ephemeral=True
             )
             return
@@ -182,7 +182,7 @@ def register(bot: Bot):
 
                 await interaction.response.send_message(  # noqa
                     f"Correct!\n\n"
-                    f"Solution: {' '.join(guess_emojis)} → {' '.join(feedback)}\n\n"
+                    f"Solution: {" ".join(guess_emojis)} → {" ".join(feedback)}\n\n"
                     f"**Your guess history:**\n{render_guess_history(puzzle)}",
                     ephemeral=True
                 )
@@ -192,7 +192,7 @@ def register(bot: Bot):
             else:
                 await interaction.response.send_message(  # noqa
                     f"Not quite!\n"
-                    f"Your guess: {' '.join(guess_emojis)} → {' '.join(feedback)}\n\n"
+                    f"Your guess: {" ".join(guess_emojis)} → {" ".join(feedback)}\n\n"
                     f"**Your guess history:**\n{render_guess_history(puzzle)}",
                     ephemeral=True
                 )

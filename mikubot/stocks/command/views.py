@@ -1,18 +1,17 @@
 from io import BytesIO
-from datetime import datetime, timezone
-from discord import Interaction, ButtonStyle, File, Embed
+from discord import Interaction, ButtonStyle, File, Embed, Color
 from discord.ui import View, Button, button as view_button
 
 from mikubot import Bot
-from mikubot.stocks.intervals import GraphInterval, IntervalData, DayIntervalData, WeekIntervalData, MonthIntervalData
-from mikubot.stocks.models import Portfolio, Security, TransactionType
+from mikubot.stocks.intervals import SecurityIntervals
+from mikubot.stocks.models import Portfolio, TransactionType
 
-from .utils import create_security_embed, create_transaction_embed, create_portfolio_embed, next_occurrence
+from .embeds import HelpEmbed, TransactionEmbed, PortfolioEmbed
 from .modals import CancelModal, CreateOrderModal
 
 
-class IntervalButton(Button['Interval']):
-    def __init__(self, interval: GraphInterval):
+class IntervalButton(Button["Interval"]):
+    def __init__(self, interval: SecurityIntervals):
         super().__init__(
             style=ButtonStyle.secondary,
             label=interval.name.upper(),
@@ -21,7 +20,7 @@ class IntervalButton(Button['Interval']):
 
     async def callback(self, interaction: Interaction):
         await interaction.response.send_message(  # noqa
-            'Loading...',
+            "Loading...",
             ephemeral=True,
             delete_after=3,
         )
@@ -31,11 +30,11 @@ class IntervalButton(Button['Interval']):
 
 
 class GraphIntervalView(View):
-    def __init__(self, selected: GraphInterval | None = GraphInterval.day):
+    def __init__(self, selected: SecurityIntervals | None = SecurityIntervals.day):
         super().__init__()
         self.value = selected
 
-        for interval in GraphInterval:
+        for interval in SecurityIntervals:
             button = IntervalButton(interval)
 
             if interval == selected:
@@ -50,10 +49,10 @@ class ConfirmView(View):
         super().__init__()
         self.value = None
 
-    @view_button(label='Confirm', style=ButtonStyle.green, emoji='✔️')
+    @view_button(label="Confirm", style=ButtonStyle.green, emoji="✔️")
     async def confirm(self, interaction: Interaction, button: Button):
         await interaction.response.send_message(  # noqa
-            'Creating portfolio...',
+            "Creating portfolio...",
             ephemeral=True,
             delete_after=3,
         )
@@ -61,10 +60,10 @@ class ConfirmView(View):
         self.value = True
         self.stop()
 
-    @view_button(label='Cancel', style=ButtonStyle.grey, emoji='❌')
+    @view_button(label="Cancel", style=ButtonStyle.grey, emoji="❌")
     async def cancel(self, interaction: Interaction, button: Button):
         await interaction.response.send_message(  # noqa
-            'Cancelling.',
+            "Cancelling.",
             ephemeral=True,
             delete_after=3,
         )
@@ -78,14 +77,14 @@ class PortfolioSelector(View):
         super().__init__(timeout=None)
         self.bot = bot
 
-    @view_button(label='Pending transactions', style=ButtonStyle.gray, emoji='📄')
+    @view_button(label="Pending transactions", style=ButtonStyle.gray, emoji="📄")
     async def pending(self, interaction: Interaction, button: Button):
         portfolio = Portfolio.get(interaction.user.id)
         pending = [t for t in portfolio.get_transactions() if t.is_pending or t.is_cancellation_requested]
 
         if not pending:
             await interaction.response.send_message(  # noqa
-                'No pending transactions',
+                "No pending transactions",
                 ephemeral=True,
                 delete_after=3,
             )
@@ -95,20 +94,41 @@ class PortfolioSelector(View):
 
         for i in range(0, len(pending), 10):
             await interaction.followup.send(
-                embeds=list(map(create_transaction_embed, pending[i:i+10])),
+                embeds=list(map(TransactionEmbed, pending[i:i+10])),
                 ephemeral=True,
             )
 
-    @view_button(label='Securities', style=ButtonStyle.gray, emoji='💱')
+    @view_button(label="Securities", style=ButtonStyle.gray, emoji="💱")
     async def prices(self, interaction: Interaction, button: Button):
         await interaction.response.defer(ephemeral=True)  # noqa
 
-        securities = [Security(key=k, **data) for k, data in self.bot.market.domain('securities').items()]
-        securities.sort(key=lambda s: s.key)
+        securities = list(self.bot.market.securities.all().values())
+        securities.sort(key=lambda s: s.config.key)
 
-        embeds = [create_security_embed(s) for s in securities]
+        embeds = []
+        lines = []
 
-        for i in range(0, len(securities), 10):
+        for sec in securities:
+            price_old = self.bot.market.history.get_price_at_or_before_interval(sec.config.key, SecurityIntervals.day)
+            price_old = price_old or sec.state.price
+            price_now = sec.state.price
+            change = (price_now - price_old) / price_old
+
+            lines.append(
+                f"- **{sec.config.key}** | _{sec.config.name}_ [ASK **{sec.ask:,.2f}** | BID **{sec.bid:,.2f}**] (**{change:+,.2%}**)")
+
+        # Paginate if too many
+        chunk_size = 30
+        for i in range(0, len(lines), chunk_size):
+            chunk = lines[i:i + chunk_size]
+
+            embeds.append(Embed(
+                title="Market Securities",
+                description="\n".join(chunk),
+                color=Color.blue()
+            ))
+
+        for i in range(0, len(embeds), 10):
             await interaction.followup.send(
                 embeds=embeds[i:i + 10],
                 ephemeral=True,
@@ -119,42 +139,13 @@ class PortfolioSelector(View):
         message = None
 
         while True:
-            intervals = {
-                GraphInterval.day: DayIntervalData,
-                GraphInterval.week: WeekIntervalData,
-                GraphInterval.month: MonthIntervalData,
-            }
-
-            now = datetime.now(timezone.utc)
-            interval = intervals[interval_view.value](now)
-
-            data = [self.bot.market.get_price_graph_data(s.key, interval) for s in securities]
-            fig, axes = self.bot.market.create_graph_matrix(*data, interval=interval)
-
-            for ax, s, ax_data in zip(axes, securities, data):
-                past = self.bot.market.get_price_history(s.key,
-                   before=interval.start,
-                   limit=1,
-                )
-
-                title = s.key
-                past_price = ax_data[0][1] if len(ax_data) else None
-                past_price = past[0][1] if len(past) else past_price
-
-                if past_price:
-                    percent = (s.price - past_price) / past_price
-                    percent_sign = '-' if ((percent > 0) - (percent < 0)) < 0 else '+'
-                    title += f' ({percent_sign}{100 * percent:,.2f}%)'
-
-                ax.set_title(title)
-
-            fig.tight_layout()
+            fig, _ = self.bot.market.graphs.create_price_matrix(securities, interval_view.value, cols=...)
 
             # Save figure to an in-memory file
             buffer = BytesIO()
             fig.savefig(buffer, format="png")
             buffer.seek(0)
-            file = File(buffer, 'stocks.png')
+            file = File(buffer, "stocks.png")
 
             if not message:
                 message = await interaction.followup.send(
@@ -174,11 +165,11 @@ class PortfolioSelector(View):
 
             interval_view = GraphIntervalView(interval_view.value)
 
-    @view_button(label='Cancel a transaction', style=ButtonStyle.red, emoji='✖️')
+    @view_button(label="Cancel a transaction", style=ButtonStyle.red, emoji="✖️")
     async def cancel(self, interaction: Interaction, button: Button):
         if not self.bot.market.is_open:
             await interaction.response.send_message(  # noqa
-                'The market is currently closed.',
+                "The market is currently closed.",
                 ephemeral=True,
                 delete_after=3,
             )
@@ -187,11 +178,11 @@ class PortfolioSelector(View):
         modal = CancelModal(self.bot.market)
         await interaction.response.send_modal(modal)  # noqa
 
-    @view_button(label='Sell', style=ButtonStyle.red, emoji='➖', row=1)
+    @view_button(label="Sell", style=ButtonStyle.red, emoji="➖", row=1)
     async def sell(self, interaction: Interaction, button: Button):
         if not self.bot.market.is_open:
             await interaction.response.send_message(  # noqa
-                'The market is currently closed.',
+                "The market is currently closed.",
                 ephemeral=True,
                 delete_after=3,
             )
@@ -200,11 +191,11 @@ class PortfolioSelector(View):
         modal = CreateOrderModal(self.bot.market, TransactionType.SELL)
         await interaction.response.send_modal(modal)  # noqa
 
-    @view_button(label='Buy', style=ButtonStyle.green, emoji='➕', row=1)
+    @view_button(label="Buy", style=ButtonStyle.green, emoji="➕", row=1)
     async def buy(self, interaction: Interaction, button: Button):
         if not self.bot.market.is_open:
             await interaction.response.send_message(  # noqa
-                'The market is currently closed.',
+                "The market is currently closed.",
                 ephemeral=True,
                 delete_after=3,
             )
@@ -213,10 +204,10 @@ class PortfolioSelector(View):
         modal = CreateOrderModal(self.bot.market, TransactionType.BUY)
         await interaction.response.send_modal(modal)  # noqa
 
-    @view_button(label='Refresh', style=ButtonStyle.gray, emoji='🔁', row=2)
+    @view_button(label="Refresh", style=ButtonStyle.gray, emoji="🔁", row=2)
     async def refresh(self, interaction: Interaction, button: Button):
         portfolio = Portfolio.get(interaction.user.id)
-        embed = create_portfolio_embed(interaction.user, self.bot, portfolio)
+        embed = PortfolioEmbed(portfolio, interaction.user, self.bot.market, self.bot.settings.market)
 
         await interaction.response.send_message(  # noqa
             embed=embed,
@@ -224,40 +215,11 @@ class PortfolioSelector(View):
             ephemeral=True,
         )
 
-    @view_button(label='Info', style=ButtonStyle.gray, emoji='❔', row=2)
+    @view_button(label="Info", style=ButtonStyle.gray, emoji="❔", row=2)
     async def help(self, interaction: Interaction, button: Button):
         settings = self.bot.settings.market
 
-        next_open_timestamp = next_occurrence(settings.open_time).timestamp()
-        next_close_timestamp = next_occurrence(settings.close_time).timestamp()
-
-        help_text = f"""\
-You can buy and sell fake stocks for fun in a small simulated economy. 🪙
-
-Use the `Securities` button in your portfolio to see the available assets that can be traded.
-
-- Interest rate: {settings.interest_rate * 100:,.2f}% per week (distributed mondays on market opening time).
-- Order fee: {settings.order_fee:,.2f} per transaction in addition to {settings.order_fee_rate * 100:,.2f}% of the asset's market value.
-- Starting credit: {settings.starting_credit:,.2f} when opening the portfolio.
-- Market open time: <t:{int(next_open_timestamp)}:t>.
-- Market close time: <t:{int(next_close_timestamp)}:t>.
-
-✅ **Some beginner tips**
-
-- You buy and sell using the 4 character ID of the security.
-- You buy the ASK price and sell at the BID price.
-- If your order isn't going through, check your LIMIT and STOP price.
-- Interest rate only applies to cash that's NOT invested.
-"""
-
-        embed = Embed(
-            title='💹 Eden stock market',
-            description=help_text,
-        )
-
-        embed.set_footer(text='This is a work in progress.')
-
         await interaction.response.send_message(  # noqa
-            embed=embed,
+            embed=HelpEmbed(settings),
             ephemeral=True,
         )

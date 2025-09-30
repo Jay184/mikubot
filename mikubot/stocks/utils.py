@@ -13,8 +13,8 @@ def next_month() -> datetime:
 
 standard_model_config = ConfigDict(
     validate_by_name=True,
-    validate_by_alias=True,  # Allows 'timeOfDay' to fill 'time_of_day'
-    serialize_by_alias=True,  # Serializes 'time_of_day' to 'timeOfDay'
+    validate_by_alias=True,  # Allows "timeOfDay" to fill "time_of_day"
+    serialize_by_alias=True,  # Serializes "time_of_day" to "timeOfDay"
     alias_generator=to_camel,
-    extra='ignore',
+    extra="ignore",
 )

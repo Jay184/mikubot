@@ -17,9 +17,9 @@ class SettingsCategories(enum.Enum):
 
 
 def register(bot: Bot):
-    @bot.tree.command(name='settings', description='Set bot settings.')
+    @bot.tree.command(name="settings", description="Set bot settings.")
     @checks.has_permissions(administrator=True)
-    @describe(category='Settings category.')
+    @describe(category="Settings category.")
     async def handler(interaction: Interaction, category: SettingsCategories = SettingsCategories.general):
         modal_type: Type[modals.SettingsModal] = category.value
         modal = modal_type(bot)

@@ -4,12 +4,12 @@ from mikubot import Bot
 
 
 def register(bot: Bot):
-    @bot.tree.command(name='avatar', description='Get the avatar of a user.')
+    @bot.tree.command(name="avatar", description="Get the avatar of a user.")
     @checks.bot_has_permissions(send_messages=True)
-    @describe(user='The user to retrieve the avatar of.')
+    @describe(user="The user to retrieve the avatar of.")
     async def handler(interaction: Interaction, user: Member):
         embed = Embed(
-            title=f'{user.name}\'s Avatar',
+            title=f"{user.name}'s Avatar",
             color=0x0099ff,
         )
 

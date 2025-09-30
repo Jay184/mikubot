@@ -18,14 +18,14 @@ def register(bot: Bot):
             power=settings.power,
         )
 
-    @bot.tree.command(name='uwu', description='Uwu-ify your text!')
+    @bot.tree.command(name="uwu", description="Uwu-ify your text!")
     @checks.bot_has_permissions(send_messages=True)
-    @describe(text='The text you want to uwu-ify.')
+    @describe(text="The text you want to uwu-ify.")
     async def handler(interaction: Interaction, text: str):
         text = create_uwufier(interaction.channel).uwuify(text)
         await interaction.response.send_message(text[:2000])  # noqa
 
-    @bot.tree.context_menu(name='uwufy')
+    @bot.tree.context_menu(name="uwufy")
     @checks.bot_has_permissions(send_messages=True)
     async def context_handler(interaction: Interaction, message: Message):
         text = create_uwufier(interaction.channel).uwuify(message.content)

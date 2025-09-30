@@ -3,9 +3,9 @@ from discord.ui import TextInput
 from .base import SettingsModal
 
 
-class GeneralSettingsModal(SettingsModal, title='General settings'):
+class GeneralSettingsModal(SettingsModal, title="General settings"):
     unused = TextInput(
-        label='Nothing here yet',
+        label="Nothing here yet",
         required=True,
     )
 

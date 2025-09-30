@@ -4,30 +4,30 @@ from pydantic import TypeAdapter
 from .base import SettingsModal, Bot
 
 
-class TriggerWordModal(SettingsModal, title='Trigger word settings'):
+class TriggerWordModal(SettingsModal, title="Trigger word settings"):
     enabled = TextInput(
-        label='Enabled',
-        placeholder='true',
-        default='true',
+        label="Enabled",
+        placeholder="true",
+        default="true",
         required=True,
     )
 
     allow_threads = TextInput(
-        label='Allow in threads',
-        placeholder='true',
-        default='true',
+        label="Allow in threads",
+        placeholder="true",
+        default="true",
         required=True,
     )
 
     allow_multiple = TextInput(
-        label='Allow multiple',
-        placeholder='false',
-        default='false',
+        label="Allow multiple",
+        placeholder="false",
+        default="false",
         required=True,
     )
 
     ignored_role_id = TextInput(
-        label='"Ignored" role ID',
+        label="Ignored role ID",
         required=True,
     )
 

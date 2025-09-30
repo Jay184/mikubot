@@ -18,7 +18,7 @@ class SettingsModal(Modal):
         self.bot = bot
 
     async def on_submit(self, interaction: Interaction):
-        success_message = 'Saved!'
+        success_message = "Saved!"
         await interaction.response.send_message(  # noqa
             success_message,
             ephemeral=True,
@@ -26,7 +26,7 @@ class SettingsModal(Modal):
         )
 
     async def on_error(self, interaction: Interaction, error: Exception):
-        error_message = 'Oops! Something went wrong.'
+        error_message = "Oops! Something went wrong."
         await interaction.response.send_message(  # noqa
             error_message,
             ephemeral=True,

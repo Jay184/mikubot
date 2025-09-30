@@ -39,7 +39,7 @@ async def scan_messages(bot: Bot):
 
     zoes = SqliteDict(
         bot.settings.zoe.database_file,
-        tablename='messages',
+        tablename="messages",
         autocommit=False,
         encode=msgpack.dumps,
         decode=msgpack.loads,
@@ -48,7 +48,7 @@ async def scan_messages(bot: Bot):
 
     last_messages = SqliteDict(
         bot.settings.zoe.database_file,
-        tablename='last_messages',
+        tablename="last_messages",
         autocommit=False,
         encode=msgpack.dumps,
         decode=msgpack.loads,
@@ -56,7 +56,7 @@ async def scan_messages(bot: Bot):
     )
 
     for channel, public in channels:
-        logger.info(f'Scanning #{channel.name} for messages.')
+        logger.info(f"Scanning #{channel.name} for messages.")
 
         unsaved = 0
         last = last_messages.get(str(channel.id))
@@ -71,12 +71,12 @@ async def scan_messages(bot: Bot):
         async for message in channel.history(limit=limit, after=last_message):
             if message.author.id == bot.settings.zoe.user_id and is_valid(message):
                 data = {
-                    'user': message.author.id,
-                    'channel': message.channel.id,
-                    'public': public,
-                    'link': message.jump_url,
-                    'content': message.content,
-                    'ts': message.created_at.timestamp()
+                    "user": message.author.id,
+                    "channel": message.channel.id,
+                    "public": public,
+                    "link": message.jump_url,
+                    "content": message.content,
+                    "ts": message.created_at.timestamp()
                 }
 
                 zoes[str(message.id)] = data
@@ -98,7 +98,7 @@ async def scan_messages(bot: Bot):
 
 
 def register(bot: Bot):
-    @bot.tree.command(name='zoe', description='Hits you with a random Zoe message.')
+    @bot.tree.command(name="zoe", description="Hits you with a random Zoe message.")
     @checks.bot_has_permissions(send_messages=True)
     async def handler(interaction: Interaction):
         zoe = await bot.fetch_user(bot.settings.zoe.user_id)
@@ -106,7 +106,7 @@ def register(bot: Bot):
 
         with SqliteDict(
             bot.settings.zoe.database_file,
-            tablename='messages',
+            tablename="messages",
             autocommit=False,
             encode=msgpack.dumps,
             decode=msgpack.loads,
@@ -114,19 +114,19 @@ def register(bot: Bot):
         ) as db:
             messages = list(db.values())
             message = random.choice(messages)
-            while is_public and not message.get('public'):
+            while is_public and not message.get("public"):
                 message = random.choice(messages)
 
-            jump_url = message.get('link')
-            text = message.get('content')
+            jump_url = message.get("link")
+            text = message.get("content")
 
             if len(text) > 256:
-                text = text[:253] + '...'
+                text = text[:253] + "..."
 
             embed = Embed(
                 title=text,
-                description=f'[Source]({jump_url})',
-                timestamp=datetime.fromtimestamp(message.get('ts')),
+                description=f"[Source]({jump_url})",
+                timestamp=datetime.fromtimestamp(message.get("ts")),
                 color=0xff0000,
             )
 

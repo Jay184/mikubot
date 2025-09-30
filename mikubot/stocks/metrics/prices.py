@@ -17,22 +17,22 @@ class PriceUpdateStrategy(ABC, BaseModel):
         cls._subtypes[cls.type] = cls
 
     @abstractmethod
-    def apply(self, security: 'Security', transaction: 'Transaction') -> float:
+    def apply(self, security: "Security", transaction: "Transaction") -> float:
         return security.price
 
 
 class LastTradePriceStrategy(PriceUpdateStrategy):
-    type: Literal['last_trade_price'] = 'last_trade_price'
+    type: Literal["last_trade_price"] = "last_trade_price"
 
-    def apply(self, security: 'Security', transaction: 'Transaction') -> float:
+    def apply(self, security: "Security", transaction: "Transaction") -> float:
         return transaction.price
 
 
 class VolumeWeightedAverageStrategy(PriceUpdateStrategy):
-    type: Literal['volume_weighted_average'] = 'volume_weighted_average'
+    type: Literal["volume_weighted_average"] = "volume_weighted_average"
     lookback: int = 10
 
-    def apply(self, security: 'Security', transaction: 'Transaction') -> float:
+    def apply(self, security: "Security", transaction: "Transaction") -> float:
         recent = security.get_transactions()[-self.lookback:]
         total_volume = transaction.quantity + sum(t.quantity for t in recent)
         weighted_sum = transaction.price * transaction.quantity + sum(
@@ -42,9 +42,9 @@ class VolumeWeightedAverageStrategy(PriceUpdateStrategy):
 
 
 class SlippagePriceStrategy(PriceUpdateStrategy):
-    type: Literal['slippage_price'] = 'slippage_price'
+    type: Literal["slippage_price"] = "slippage_price"
     base_impact: float = 0.01
 
-    def apply(self, security: 'Security', transaction: 'Transaction') -> float:
+    def apply(self, security: "Security", transaction: "Transaction") -> float:
         direction = 1 if transaction.price > security.price else -1
         return security.price + direction * self.base_impact * transaction.quantity
