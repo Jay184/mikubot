@@ -2,10 +2,12 @@ from discord import Interaction
 from discord.app_commands import checks
 from mikubot import Bot
 
+from .utils import is_admin_or_owner
+
 
 def register(bot: Bot):
     @bot.tree.command(name="sync", description="Syncs commands.")
-    @checks.has_permissions(administrator=True)
+    @is_admin_or_owner(bot.settings.owner_id)
     @checks.bot_has_permissions(send_messages=True)
     async def handler(interaction: Interaction):
         commands = await bot.tree.sync()
@@ -13,12 +15,5 @@ def register(bot: Bot):
 
         await interaction.response.send_message(  # noqa
             response_message,
-            ephemeral=True,
-        )
-
-    @handler.error
-    async def error_handler(interaction: Interaction, error):
-        await interaction.response.send_message(  # noqa
-            str(error),
             ephemeral=True,
         )

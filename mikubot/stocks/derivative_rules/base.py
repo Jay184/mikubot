@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
-from typing import ClassVar, Unpack
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 if TYPE_CHECKING:
@@ -9,6 +8,7 @@ if TYPE_CHECKING:
     from ..core import Market
 
 from ..utils import standard_model_config
+from ..polymorphic import PolymorphicBase
 
 
 class KnockoutException(Exception):
@@ -26,23 +26,7 @@ class DerivativeRule(ABC, DerivativeRuleBaseModel):
         ...
 
 
-class DerivativeRuleConfig(ABC, DerivativeRuleBaseModel):
-    # Registry of all subclasses by type string
-    _subtypes: ClassVar[dict[str, type["DerivativeRuleConfig"]]] = {}
-
-    def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]):
-        super().__init_subclass__(**kwargs)
-
-        pydantic_fields = getattr(cls, "__pydantic_fields__", {})
-
-        if "type" in pydantic_fields:
-            function_type = pydantic_fields["type"].default
-            DerivativeRuleConfig._subtypes[function_type] = cls
-
-    @staticmethod
-    def get_type(type_key: str) -> type["DerivativeRuleConfig"] | None:
-        return DerivativeRuleConfig._subtypes.get(type_key)
-
+class DerivativeRuleConfig(PolymorphicBase, ABC, identity="derivatives"):
     @abstractmethod
     def create(self, market: "Market", security: "Security") -> DerivativeRule | None:
         ...

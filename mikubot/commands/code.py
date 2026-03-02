@@ -1,5 +1,5 @@
 from discord import Interaction
-from discord.app_commands import describe, checks, choices, Choice, Range
+from discord.app_commands import describe, checks, choices, Choice
 from capstone import Cs as Capstone, CS_ARCH_X86, CS_MODE_64, CS_OPT_SYNTAX_INTEL
 from pefile import PE
 from mikubot import Bot
@@ -32,7 +32,7 @@ def register(bot: Bot):
         Choice(name="1.02", value=2),
         Choice(name="1.03", value=3),
     ])
-    async def handler(interaction: Interaction, version: Choice[int], address: int, length: int = 0x20, assembly: bool = False):
+    async def handler(interaction: Interaction, address: int, length: int = 0x20, assembly: bool = True, version: Choice[int] = 3):
         md = Capstone(CS_ARCH_X86, CS_MODE_64)
         md.syntax = CS_OPT_SYNTAX_INTEL
 

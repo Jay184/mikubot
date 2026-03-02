@@ -154,7 +154,10 @@ def has_optional_role(item: int | None = None):
 
 def is_market_admin(admins: list[int]):
     def predicate(interaction: Interaction) -> bool:
-        return interaction.user.id in admins
+        if interaction.user.id in admins:
+            return True
+
+        raise errors.CheckFailure("You are not an admin of the exchange market.")
 
     return checks.check(predicate)
 
@@ -627,32 +630,6 @@ def register_admin(bot: Bot) -> Group:
             ephemeral=True,
         )
 
-    @handler_admin_set_price.error
-    @handler_admin_apply_change.error
-    @handler_admin_view.error
-    @handler_admin_set_positions.error
-    @handler_admin_add_balance.error
-    @handler_admin_sync.error
-    @handler_admin_freeze.error
-    @handler_admin_unfreeze.error
-    @handler_admin_delist.error
-    @handler_admin_wipehistory.error
-    @handler_admin_wipe.error
-    @handler_admin_swap.error
-    async def error_handler(interaction: Interaction, error: errors.CommandInvokeError):
-        if isinstance(error, errors.CheckFailure):
-            await interaction.response.send_message(  # noqa
-                "You're missing privileges to run this command.",
-                ephemeral=True,
-            )
-            return
-
-        logger.exception(error)
-        await interaction.response.send_message(  # noqa
-            str(error.original),
-            ephemeral=True,
-        )
-
     return admin_group
 
 
@@ -716,7 +693,7 @@ def register(bot: Bot):
                 price_old = bot.market.history.get_price_at_or_before_interval(sec.config.key, interval)
                 price_old = price_old or sec.state.price
                 price_now = sec.state.price
-                change = (price_now - price_old) / price_old
+                change = (price_now - price_old) / price_old if price_old > 0.0 else 0.0
 
                 lines.append(f"- **{sec.config.key}** | _{sec.config.name}_ [ASK **{sec.ask:,.2f}** | BID **{sec.bid:,.2f}**] (**{change:+,.2%}**)")
 
@@ -901,18 +878,3 @@ def register(bot: Bot):
     @has_optional_role(bot.settings.market.required_role)
     async def context_handler(interaction: Interaction, user: User):
         await send_portfolio(interaction, bot, user)
-
-    @handler_view.error
-    @handler_help.error
-    @handler_assets.error
-    @handler_transactions.error
-    @handler_top.error
-    @handler_buy.error
-    @handler_sell.error
-    @handler_cancel.error
-    async def error_handler(interaction: Interaction, error: errors.CommandInvokeError):
-        logger.exception(error)
-        await interaction.response.send_message(  # noqa
-            str(error.original),
-            ephemeral=True,
-        )

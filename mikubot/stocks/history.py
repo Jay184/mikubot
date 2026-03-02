@@ -47,6 +47,48 @@ class HistoryService:
         rows = self.store.select(sql, tuple(params))
         return list((datetime.fromtimestamp(ts, timezone.utc), p) for ts, p in rows)
 
+    def get_last_before(self, user_id: int, ts: datetime):
+        sql = """
+            SELECT timestamp, balance
+            FROM balance_history
+            WHERE user_id = ? AND timestamp < ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """
+        rows = self.store.select(sql, (str(user_id), int(ts.timestamp())))
+        return [(datetime.fromtimestamp(t, timezone.utc), b) for t, b in rows]
+
+    def get_in_interval(self, user_id: int, start: datetime, end: datetime):
+        sql = """
+            SELECT timestamp, balance
+            FROM balance_history
+            WHERE user_id = ? AND timestamp > ? AND timestamp < ?
+            ORDER BY timestamp ASC
+        """
+        rows = self.store.select(sql, (str(user_id), int(start.timestamp()), int(end.timestamp())))
+        return [(datetime.fromtimestamp(t, timezone.utc), b) for t, b in rows]
+
+    def get_last_price_before(self, ticker: str, ts: datetime):
+        sql = """
+            SELECT timestamp, price
+            FROM price_history
+            WHERE security_key = ? AND timestamp < ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """
+        rows = self.store.select(sql, (ticker, int(ts.timestamp())))
+        return [(datetime.fromtimestamp(t, timezone.utc), p) for t, p in rows]
+
+    def get_price_in_interval(self, ticker: str, start: datetime, end: datetime):
+        sql = """
+            SELECT timestamp, price
+            FROM price_history
+            WHERE security_key = ? AND timestamp > ? AND timestamp < ?
+            ORDER BY timestamp ASC
+        """
+        rows = self.store.select(sql, (ticker, int(start.timestamp()), int(end.timestamp())))
+        return [(datetime.fromtimestamp(t, timezone.utc), p) for t, p in rows]
+
     def get_balance_history(self, user_id: int, *, before: datetime = None, after: datetime = None, limit: int = None) -> list[tuple[datetime, float]]:
         where_clauses = ["user_id = ?"]
         params = [str(user_id)]
@@ -59,8 +101,9 @@ class HistoryService:
             where_clauses.append("timestamp > ?")
             params.append(int(after.timestamp()))
 
+        order = "DESC" if limit and before and not after else "ASC"
         where_sql = " AND ".join(where_clauses)
-        sql = f"SELECT timestamp, balance FROM balance_history WHERE {where_sql} ORDER BY timestamp ASC"
+        sql = f"SELECT timestamp, balance FROM balance_history WHERE {where_sql} ORDER BY timestamp {order}"
 
         if limit:
             sql += " LIMIT ?"

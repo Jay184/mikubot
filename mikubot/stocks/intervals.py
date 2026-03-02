@@ -21,13 +21,13 @@ class IntervalData:
 
 
 class DayIntervalData(IntervalData):
-    def __init__(self, emd: datetime):
-        start = emd - timedelta(days=1)
+    def __init__(self, end: datetime):
+        start = end - timedelta(days=1)
 
         super().__init__(
             label="1D",
             start=start.replace(second=0, microsecond=0),
-            end=emd,
+            end=end,
             freq="5min",
             tick_format="%H:%M",
             locator=mdates.HourLocator(interval=3),
@@ -36,13 +36,13 @@ class DayIntervalData(IntervalData):
 
 
 class WeekIntervalData(IntervalData):
-    def __init__(self, emd: datetime):
-        start = emd - timedelta(days=7)
+    def __init__(self, end: datetime):
+        start = end - timedelta(days=7)
 
         super().__init__(
             label="1W",
             start=start.replace(minute=0, second=0, microsecond=0),
-            end=emd,
+            end=end,
             freq="1h",
             tick_format="%a",
             locator=mdates.DayLocator(),
@@ -51,12 +51,12 @@ class WeekIntervalData(IntervalData):
 
 
 class MonthIntervalData(IntervalData):
-    def __init__(self, emd: datetime):
-        start = emd - timedelta(days=30)
+    def __init__(self, end: datetime):
+        start = end - timedelta(days=30)
         super().__init__(
             label="1M",
             start=start.replace(hour=0, minute=0, second=0, microsecond=0),
-            end=emd,
+            end=end,
             freq="12h",
             tick_format="%d-%b",
             locator=mdates.DayLocator(interval=3),

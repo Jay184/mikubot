@@ -1,19 +1,43 @@
-from typing import Self, Annotated
+from typing import Self, Annotated, Literal
 from datetime import time
 from pathlib import Path
+from functools import cached_property
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from pydantic import PositiveInt, NonNegativeInt, PositiveFloat, NonNegativeFloat
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic import PositiveInt, NonNegativeInt, PositiveFloat, NonNegativeFloat, HttpUrl
+from pydantic import field_validator, BeforeValidator, PlainSerializer
 from pydantic.alias_generators import to_camel
 import os
 import random
 import re
+import requests
 
 from .stocks.models import SecurityConfig
 
 
 type Probability = Annotated[float, Field(strict=True, ge=0, le=1)]
 type NonEmptyString = Annotated[str, Field(min_length=1)]
+
+type RawMultilineInput = str | list[str]
+
+def join_lines(value: RawMultilineInput) -> str:
+    if isinstance(value, list):
+        return "\n".join(value)
+    elif isinstance(value, str):
+        return value
+
+    raise ValueError("Expected string or a list of strings")
+
+
+def split_lines(value: str) -> list[str]:
+    return value.splitlines()
+
+
+type MultilineText = Annotated[
+    RawMultilineInput,
+    BeforeValidator(join_lines),
+    PlainSerializer(split_lines, return_type=list[str], when_used="json")
+]
 
 
 class MikuBotBaseModel(BaseModel):
@@ -66,7 +90,21 @@ class BrazilSettings(MikuBotBaseModel):
     team_role_id: PositiveInt
 
 
+class LocalSource(BaseModel):
+    source: Literal["local"]
+    path: str
+
+
+class UrlSource(BaseModel):
+    source: Literal["url"]
+    url: HttpUrl
+
+
+type BannedSource = LocalSource | UrlSource
+
+
 class RenameChatSettings(MikuBotBaseModel):
+    enabled: bool = True
     success_chance: Probability = 0.02
     roll_time: NonNegativeFloat = 3.0
     failure_delay: NonNegativeFloat = 3.0
@@ -85,6 +123,40 @@ class RenameChatSettings(MikuBotBaseModel):
     streak_postfixes: dict[PositiveInt, str] = Field(default_factory=dict)
     retrieval_messages: list[str] = Field(default_factory=list)
 
+    banned_word_sources: list[BannedSource] = Field(default_factory=list)
+
+    @cached_property
+    def banned_words(self) -> set[str]:
+        words = set()
+
+        for src in self.banned_word_sources:
+            try:
+                if isinstance(src, LocalSource):
+                    path = Path(src.path)
+                    if path.exists():
+                        words.update(
+                            w.strip().lower()
+                            for w in path.read_text(encoding="utf-8").splitlines()
+                            if w.strip()
+                        )
+                elif isinstance(src, UrlSource):
+                    resp = requests.get(str(src.url), timeout=5)
+                    if resp.ok:
+                        words.update(
+                            w.strip().lower()
+                            for w in resp.text.splitlines()
+                            if w.strip()
+                        )
+            except Exception as e:
+                # Log but don’t crash the bot if one source fails
+                print(f"[WARN] Failed to load banned words from {src}: {e}")
+
+        return words
+
+    def contains_banned(self, name: str) -> bool:
+        tokens = re.split(r"[_\-\s]+", name.lower())
+        return any(token in self.banned_words for token in tokens if token)
+
     def lowest_postfix(self, streak: int) -> str | None:
         keys = sorted(self.streak_postfixes.keys(), reverse=True)
 
@@ -93,20 +165,38 @@ class RenameChatSettings(MikuBotBaseModel):
                 return self.streak_postfixes[key].format(streak=streak)
 
     def random_delay(self) -> float:
+        """
+        Generate a random delay duration (in seconds) between the configured
+        minimum and maximum delay times.
+        """
         minutes_range = self.max_minutes - self.min_minutes
         value = random.random() ** 3
         return (value * minutes_range + self.min_minutes) * 60.0
 
+    def random_retrieval_message(self) -> str | None:
+        if not self.retrieval_messages:
+            return None
+
+        return random.choice(self.retrieval_messages)
+
+
+class ReplyCommandConfig(MikuBotBaseModel):
+    name: str
+    description: str
+    text: MultilineText
+    enabled: bool = True
+    ephemeral: bool = False
+
 
 class TriggerWordReply(MikuBotBaseModel):
-    text: str
+    text: MultilineText
     weight: NonNegativeInt = 1
 
 
 class TriggerWord(MikuBotBaseModel):
     pattern: NonEmptyString
     replies: list[TriggerWordReply] = Field(default_factory=list)
-    text: str | None = None
+    text: MultilineText | None = None
 
     def triggered(self, text: str) -> bool:
         match = re.search(self.pattern, text, re.IGNORECASE)
@@ -215,9 +305,12 @@ class Settings(BaseSettings):
 
     discord_key: str = None
     storage_file: Path
+    owner_id: int | None = None
+    restart_exit_code: int = 39
     sync_commands: bool = True
     logging: LoggingSettings
     trigger_words: TriggerWordSettings
+    reply_commands: list[ReplyCommandConfig] = Field(default_factory=list)
     rename_chat: RenameChatSettings
     brazil: BrazilSettings
     choosable_roles: ChoosableRoleSettings

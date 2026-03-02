@@ -1,20 +1,15 @@
-from typing import TYPE_CHECKING, Literal, Unpack, ClassVar
+from typing import TYPE_CHECKING, Literal
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, ConfigDict
 
 if TYPE_CHECKING:
     from .. import Security, Transaction
 
 from ..utils import standard_model_config
+from ..polymorphic import PolymorphicBase
 
 
-class PriceUpdateStrategy(ABC, BaseModel):
+class PriceUpdateStrategy(ABC, PolymorphicBase, identity="price_update_strategies"):
     model_config = standard_model_config
-
-    _subtypes: ClassVar[dict] = {}
-
-    def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]):
-        cls._subtypes[cls.type] = cls
 
     @abstractmethod
     def apply(self, security: "Security", transaction: "Transaction") -> float:

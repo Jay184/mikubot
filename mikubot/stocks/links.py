@@ -11,6 +11,7 @@ from .models import Security, SecurityLinkConfig
 def update_linked_prices(market: Market, securities: dict[str, Security], interval: float, *, local: bool = False):
     now = datetime.now(timezone.utc)
     changes = {}
+    cache = {}
 
     for ticker, sec in securities.items():
         link = sec.config.link
@@ -24,7 +25,7 @@ def update_linked_prices(market: Market, securities: dict[str, Security], interv
             change = get_local_change(link, market, now, int(interval))
             tag = "LOCAL"
         else:
-            change = get_remote_change(link, int(interval))
+            change = get_remote_change(link, int(interval), cache)
             tag = "REMOTE"
 
         try:
@@ -49,16 +50,23 @@ def update_linked_prices(market: Market, securities: dict[str, Security], interv
         for portfolio in sec.get_holders():
             market.history.record_balance(portfolio, int(now.timestamp()))
 
-        logger.info(f"[{tag}] {sec.config.key}: {change:+,.2%}% applied")
+        logger.info(f"[{tag}] {sec.config.key}: {change:+,.2%} applied")
 
     return changes
 
 
-def get_remote_change(link_config: SecurityLinkConfig, seconds: int) -> float:
+def get_remote_change(link_config: SecurityLinkConfig, seconds: int, cache: dict[str, float] = None) -> float:
     if not link_config.remotes:
         return 0.0
 
-    changes = [get_change_for_interval(t, seconds) for t in link_config.remotes]
+    cache = cache or {}
+
+    def _handle_ticker(t: str) -> float:
+        change = cache.get(t) or get_change_for_interval(t, seconds)
+        cache[t] = change
+        return change
+
+    changes = [_handle_ticker(t) for t in link_config.remotes]
     return _aggregate_changes(changes, link_config.multiplier, link_config.noise)
 
 

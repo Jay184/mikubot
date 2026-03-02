@@ -1,8 +1,7 @@
 from discord import Interaction, Message
-from discord.app_commands import describe, checks, CommandOnCooldown, AppCommandError
+from discord.app_commands import describe, checks
 from googletrans import Translator
 from googletrans.constants import LANGUAGES
-from loguru import logger
 
 from mikubot import Bot
 import random
@@ -74,12 +73,3 @@ def register(bot: Bot):
         await interaction.response.defer()  # noqa
         text = await mass_translate(message.content, hops, initial_lang, final_lang)
         await interaction.followup.send(text[:2000], allowed_mentions=None)  # noqa
-
-    @handler.error
-    async def error_handler(interaction: Interaction, error: AppCommandError):
-        if isinstance(error, CommandOnCooldown):
-            await interaction.response.send_message(  # noqa
-                f"{round(error.retry_after, 2)} seconds left"
-            )
-
-        logger.exception(error)

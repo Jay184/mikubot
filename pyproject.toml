@@ -22,6 +22,8 @@ dependencies = [
     "requests-sse>=0.5.2",
     "rich>=14.1.0",
     "sqlitedict>=2.1.0",
+    "sqlmodel>=0.0.27",
+    "typer>=0.19.2",
     "uwuipy>=0.1.10",
     "yfinance>=0.2.66",
 ]

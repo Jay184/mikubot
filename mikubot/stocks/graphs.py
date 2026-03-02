@@ -44,16 +44,13 @@ class GraphService:
 
         # Annotate % change in title
         for ax, sec, data in zip(axes, securities, data_list):
-            past = self.history.get_price_history(
-                sec.config.key, before=interval_data.start, limit=1
-            )
+            price_old = self.history.get_price_at_or_before_interval(sec.config.key, interval)
+            price_old = price_old or sec.state.price
+            price_now = sec.state.price
+            change = (price_now - price_old) / price_old if price_old > 0.0 else 0.0
 
-            past_price = data[0][1] if len(data) else None
-            past_price = past[0][1] if len(past) else past_price
-
-            if past_price:
-                percent = (sec.state.price - past_price) / past_price
-                ax.set_title(f"{sec.config.key} ({percent:+,.2%}%)")
+            if abs(change) > 1e-12:
+                ax.set_title(f"{sec.config.key} ({change:+,.2%})")
             else:
                 ax.set_title(sec.config.key)
 
@@ -72,14 +69,14 @@ class GraphService:
 
     def get_price_graph_data(self, ticker: str, interval: IntervalData) -> GraphData:
         """Return minimal + interval data for graphing"""
-        last_before = self.history.get_price_history(ticker, before=interval.start, limit=1)
-        interval_data = self.history.get_price_history(ticker, after=interval.start, before=interval.end)
-        return last_before + interval_data
+        last_before = self.history.get_last_price_before(ticker, interval.start)
+        in_range = self.history.get_price_in_interval(ticker, interval.start, interval.end)
+        return last_before + in_range
 
     def get_balance_graph_data(self, user_id: int, interval) -> GraphData:
-        last_before = self.history.get_balance_history(user_id, before=interval.start, limit=1)
-        interval_data = self.history.get_balance_history(user_id, after=interval.start, before=interval.end)
-        return last_before + interval_data
+        last_before = self.history.get_last_before(user_id, interval.start)
+        in_range = self.history.get_in_interval(user_id, interval.start, interval.end)
+        return last_before + in_range
 
     def create_graph(self, data: GraphData, interval: IntervalData) -> tuple[Figure, Axes]:
         fig, ax = subplots(figsize=(12, 6))
@@ -128,7 +125,14 @@ class GraphService:
 
     @staticmethod
     def _set_graph_axes(ax: Axes, frame: DataFrame, interval: IntervalData):
-        ax.plot(frame.index, frame["price"], marker=",", linestyle="-", drawstyle="steps-post")
+        ax.plot(
+            frame.index,
+            frame["price"],
+            marker=",",
+            linestyle="-",
+            drawstyle="steps-post",
+            linewidth=1.5,
+        )
 
         # Annotate last point
         last_point = frame.iloc[-1]
@@ -167,9 +171,11 @@ class GraphService:
         frame = DataFrame(data, columns=["datetime", "price"])
         frame.set_index("datetime", inplace=True)
         # frame.index = to_datetime(frame.index)
+        # frame = frame.sort_index()
 
         # Get the last known price before start
-        last_before_start = frame[frame.index < interval.start].iloc[-1:]  # could be empty
+        mask_before = frame.index <= interval.start
+        last_before_start = frame[mask_before].iloc[-1:]  # could be empty
         frame = concat([last_before_start, frame[frame.index >= interval.start]])
 
         # Create a full DateTimeIndex at the desired frequency

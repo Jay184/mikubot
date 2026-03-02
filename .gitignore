@@ -164,11 +164,13 @@ cython_debug/
 # Mongo Explorer plugin:
 .idea/mongoSettings.xml
 
-logs/
+logs/*
+
+banned_words/*
+!banned_words/.gitkeep
+
 token.txt
 settings.json
 
 # Databases
-storage.sqlite
-zoe.sqlite
-stocks.sqlite
+*.sqlite

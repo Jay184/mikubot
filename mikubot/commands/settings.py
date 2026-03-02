@@ -24,10 +24,3 @@ def register(bot: Bot):
         modal_type: Type[modals.SettingsModal] = category.value
         modal = modal_type(bot)
         await interaction.response.send_modal(modal)  # noqa
-
-    @handler.error
-    async def error_handler(interaction: Interaction, error):
-        await interaction.response.send_message(  # noqa
-            str(error),
-            ephemeral=True,
-        )

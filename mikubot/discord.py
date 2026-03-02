@@ -1,17 +1,46 @@
-import asyncio
-import logging
-import msgpack
+from typing import Any, Generator
 from loguru import logger
 from sqlitedict import SqliteDict
 from datetime import datetime, timezone
-from discord import Client, Intents, Message, Thread, Member, User, Guild, Embed
+from discord import Client, Intents, Message, Thread, Member, User, Guild, Embed, Interaction
 from discord import Activity, ActivityType, AuditLogAction
 from discord.utils import MISSING
-from discord.app_commands import CommandTree
+from discord.app_commands import CommandTree, errors
 from contextlib import contextmanager
+import asyncio
+import logging
+import msgpack
+
 from .config import Settings
 from .logger import InterceptHandler
 from .stocks.core import Market
+
+
+class CustomCommandTree(CommandTree):
+    async def on_error(self, interaction: Interaction, error: errors.AppCommandError) -> None:
+        await super().on_error(interaction, error)
+        logger.error(error)
+
+        if isinstance(error, errors.CheckFailure):
+            await interaction.response.send_message(  # noqa
+                "You're missing privileges to run this command.",
+                ephemeral=True,
+            )
+            return
+
+        if isinstance(error, errors.CommandOnCooldown):
+            await interaction.response.send_message(  # noqa
+                f"Command is on cooldown. {round(error.retry_after, 2)} seconds left.",
+                ephemeral = True,
+            )
+            return
+
+        if isinstance(error, errors.CommandInvokeError):
+            await interaction.response.send_message(  # noqa
+                str(error.original),
+                ephemeral=True,
+            )
+            return
 
 
 class Bot(Client):
@@ -27,7 +56,7 @@ class Bot(Client):
         )
 
         super().__init__(intents=intents, **options)
-        self.tree = CommandTree(self)
+        self.tree = CustomCommandTree(self)
         self.settings = settings
         self.market = Market(settings.market)
         self.market_executor = None
@@ -218,37 +247,22 @@ class Bot(Client):
         from .stocks.command import register as register_stock_market
 
         commands.sync.register(self)
+        commands.stop.register(self)
+        commands.reply_commands.register(self)
         commands.settings.register(self)
         commands.code.register(self)
         commands.avatar.register(self)
         commands.clap.register(self)
-        commands.dlc.register(self)
-        commands.backup.register(self)
-        commands.downgrade.register(self)
-        commands.download.register(self)
-        commands.drive.register(self)
         commands.edenpatch.register(self)
-        commands.expatch.register(self)
         commands.gamebanana.register(self)
-        commands.holybeans.register(self)
-        commands.hotdog.register(self)
-        commands.hitfan.register(self)
-        commands.hatefrance.register(self)
-        commands.install.register(self)
         commands.it.register(self)
-        commands.link.register(self)
         commands.list_brazil.register(self)
-        commands.localfiles.register(self)
-        commands.modules.register(self)
         commands.purge.register(self)
         commands.rename_channel.register(self)
         commands.role.register(self)
-        commands.songs.register(self)
         commands.toggle_bot_response.register(self)
-        commands.upgrade.register(self)
         commands.user_count.register(self)
         commands.uwu.register(self)
-        commands.wrongfolder.register(self)
         commands.you_are_going_to_brazil.register(self)
         commands.zoe.register(self)
         commands.guess.register(self)
@@ -275,22 +289,31 @@ class Bot(Client):
     async def release_from_brazil(self):
         settings = self.settings.brazil
 
-        for guild in self.guilds:
-            brazil_role = await guild.fetch_role(settings.brazil_role_id)
-            member_role = await guild.fetch_role(settings.member_role_id)
-            special_role = await guild.fetch_role(self.settings.rename_chat.special_role_id)
-            special_brazil_role = await guild.fetch_role(settings.special_brazil_role_id)
+        with self.storage(table="brazil_vacationers") as db:
+            for guild in self.guilds:
+                brazil_role = await guild.fetch_role(settings.brazil_role_id)
+                member_role = await guild.fetch_role(settings.member_role_id)
+                special_role = await guild.fetch_role(self.settings.rename_chat.special_role_id)
+                special_brazil_role = await guild.fetch_role(settings.special_brazil_role_id)
 
-            for member in brazil_role.members:
-                await member.remove_roles(brazil_role)
-                await member.add_roles(member_role)
-                logger.info(f"{member.display_name} has been retrieved from Brazil!")
+                for member in brazil_role.members:
+                    await member.remove_roles(brazil_role)
+                    await member.add_roles(member_role)
+                    logger.info(f"{member.display_name} has been retrieved from Brazil!")
 
-            for member in special_brazil_role.members:
-                await member.remove_roles(special_brazil_role)
-                await member.add_roles(special_role)
-                await member.add_roles(member_role)
-                logger.info(f"{member.display_name} has been retrieved from Brazil!")
+                    if f"{guild.id}:{member.id}" in db:
+                        del db[f"{guild.id}:{member.id}"]
+
+                for member in special_brazil_role.members:
+                    await member.remove_roles(special_brazil_role)
+                    await member.add_roles(special_role)
+                    await member.add_roles(member_role)
+                    logger.info(f"{member.display_name} has been retrieved from Brazil!")
+
+                    if f"{guild.id}:{member.id}" in db:
+                        del db[f"{guild.id}:{member.id}"]
+
+            db.commit()
 
     def create_log_embed(self, subject: Member, description: str = None, *, color: int = None) -> Embed:
         embed = Embed(
@@ -312,7 +335,7 @@ class Bot(Client):
         return embed
 
     @contextmanager
-    def storage(self, table: str = None, *, autocommit: bool = False):
+    def storage(self, table: str = None, *, autocommit: bool = False) -> Generator[SqliteDict, Any, None]:
         table = table or "__unnamed__"
 
         try:

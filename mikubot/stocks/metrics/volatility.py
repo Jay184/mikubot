@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Literal, Unpack, ClassVar
+from typing import TYPE_CHECKING, Literal
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from pydantic import BaseModel, ConfigDict
 import statistics
 import uuid
 
@@ -9,15 +8,11 @@ if TYPE_CHECKING:
     from .. import Transaction
 
 from ..utils import current_timestamp, standard_model_config
+from ..polymorphic import PolymorphicBase
 
 
-class VolatilityStrategy(ABC, BaseModel):
+class VolatilityStrategy(ABC, PolymorphicBase, identity="volatility_strategies"):
     model_config = standard_model_config
-
-    _subtypes: ClassVar[dict] = {}
-
-    def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]):
-        cls._subtypes[cls.type] = cls
 
     @abstractmethod
     def calculate(self, transactions: list["Transaction"]) -> float:

@@ -10,12 +10,18 @@ import uuid
 from . import metrics
 from .utils import current_timestamp, next_month, standard_model_config
 from .derivative_rules import DerivativeRuleConfig
+from .polymorphic import make_polymorphic_validator
+
 
 if TYPE_CHECKING:
     from .core import Market
 
 
 type NonEmptyString = Annotated[str, Field(min_length=1)]
+type PolymorphicDerivativeRuleConfig = make_polymorphic_validator(DerivativeRuleConfig)
+type PolymorphicLiquidityStrategy = make_polymorphic_validator(metrics.LiquidityStrategy)
+type PolymorphicPriceUpdateStrategy = make_polymorphic_validator(metrics.PriceUpdateStrategy)
+type PolymorphicVolatilityStrategy = make_polymorphic_validator(metrics.VolatilityStrategy)
 
 
 class TransactionType(str, Enum):
@@ -173,29 +179,7 @@ class SecurityLinkConfig(MarketModel):
     multiplier: float = 1.0
     noise: NonNegativeFloat = 0.0
 
-    # Duck-Typing to serialize subclass fields
-    derivative_rules: list[SerializeAsAny[DerivativeRuleConfig]] = Field(default_factory=list)
-
-    @field_validator("derivative_rules", mode="before")  # noqa
-    @classmethod
-    def validate_derivative_rules(cls, value: list[dict | DerivativeRuleConfig]) -> Any:
-        result = []
-
-        for item in value:
-            if isinstance(item, DerivativeRuleConfig):
-                result.append(item)
-            elif isinstance(item, dict):
-                type_key = item.get("type")
-                type_cls = DerivativeRuleConfig.get_type(type_key)
-
-                if type_cls is None:
-                    raise ValueError(f"Unknown derivative rule: {type_key}")
-
-                result.append(type_cls(**item))
-            else:
-                raise TypeError(f"Unsupported derivative rule definition: {item}")
-
-        return result
+    derivative_rules: list[PolymorphicDerivativeRuleConfig] = Field(default_factory=list)
 
 
 class SecurityLinkState(MarketModel):
@@ -210,36 +194,9 @@ class SecurityConfig(MarketModel):
     base_spread: NonNegativeFloat = 0.01
     link: SecurityLinkConfig | None = None
 
-    liquidity_strategy: SerializeAsAny[metrics.LiquidityStrategy] = Field(default_factory=lambda: metrics.TransactionCountLiquidity(window=300))
-    volatility_strategy: SerializeAsAny[metrics.VolatilityStrategy] = Field(default_factory=lambda: metrics.LastNVolatility(amount=10))
-    price_update_strategy: SerializeAsAny[metrics.PriceUpdateStrategy] = Field(default_factory=lambda: metrics.LastTradePriceStrategy())
-
-    @field_validator("liquidity_strategy", mode="before")  # noqa
-    @classmethod
-    def validate_liquidity_strategies(cls, value: dict | metrics.LiquidityStrategy) -> Any:
-        if isinstance(value, metrics.LiquidityStrategy):
-            return value
-
-        type_class = metrics.LiquidityStrategy._subtypes[value.get("type")]  # noqa
-        return type_class(**value)
-
-    @field_validator("volatility_strategy", mode="before")  # noqa
-    @classmethod
-    def validate_volatility_strategies(cls, value: dict | metrics.VolatilityStrategy) -> Any:
-        if isinstance(value, metrics.VolatilityStrategy):
-            return value
-
-        type_class = metrics.VolatilityStrategy._subtypes[value.get("type")]  # noqa
-        return type_class(**value)
-
-    @field_validator("price_update_strategy", mode="before")  # noqa
-    @classmethod
-    def validate_price_update_strategies(cls, value: dict | metrics.PriceUpdateStrategy) -> Any:
-        if isinstance(value, metrics.PriceUpdateStrategy):
-            return value
-
-        type_class = metrics.PriceUpdateStrategy._subtypes[value.get("type")]  # noqa
-        return type_class(**value)
+    liquidity_strategy: PolymorphicLiquidityStrategy = Field(default_factory=lambda: metrics.TransactionCountLiquidity(window=300))
+    volatility_strategy: PolymorphicVolatilityStrategy = Field(default_factory=lambda: metrics.LastNVolatility(amount=10))
+    price_update_strategy: PolymorphicPriceUpdateStrategy = Field(default_factory=lambda: metrics.LastTradePriceStrategy())
 
     @model_validator(mode="after")
     def ensure_no_self_reference(self) -> Self:
