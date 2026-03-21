@@ -1,7 +1,15 @@
 [project]
 name = "mikubot"
 version = "0.1.0"
-description = "Bot used for the Eden Project discord server."
+description = "Discord bot used for the Eden-Project Discord server."
+keywords = ["discord", "eden", "miku", "vocaloid", "project diva"]
+authors = [
+  {name = "Jay184", email = "me@jay0.mozmail.com"},
+]
+maintainers = [
+  {name = "Jay184", email = "me@jay0.mozmail.com"},
+]
+license = "0BSD"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -27,3 +35,14 @@ dependencies = [
     "uwuipy>=0.1.10",
     "yfinance>=0.2.66",
 ]
+
+[project.scripts]
+mikubot = "mikubot:main"
+
+[project.urls]
+Repository = "https://github.com/Jay184/mikubot.git"
+Issues = "https://github.com/Jay184/mikubot/issues"
+
+[build-system]
+requires = ["uv_build>=0.8.12,<0.9.0"]
+build-backend = "uv_build"

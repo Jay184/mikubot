@@ -20,6 +20,7 @@ type NonEmptyString = Annotated[str, Field(min_length=1)]
 
 type RawMultilineInput = str | list[str]
 
+
 def join_lines(value: RawMultilineInput) -> str:
     if isinstance(value, list):
         return "\n".join(value)
