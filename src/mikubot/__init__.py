@@ -1,9 +1,14 @@
+from cyclopts import App
+
 from .config import Settings
 from .discord import Bot
 from .logger import setup_logger
 
 
-def main() -> None:
+app = App()
+
+@app.default
+def run() -> None:
     settings = Settings.load()
 
     if settings.discord_key:
@@ -13,4 +18,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    app()

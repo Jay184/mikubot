@@ -1,9 +1,10 @@
-from datetime import datetime, timezone, timedelta
+from typing import Callable, Any
 from discord import Interaction, Member, Guild, Role, ForumChannel, TextChannel, CategoryChannel
 from discord.ext import tasks
 from discord.app_commands import describe, checks
 from loguru import logger
-from mikubot import Bot
+from mikubot import Bot, Settings
+from mikubot.stores import VacationStore, CounterStore
 import random
 import asyncio
 
@@ -46,12 +47,9 @@ async def release_from_brazil(
 def register(bot: Bot):
     @tasks.loop(minutes=1.0)
     async def free_due_vacationers():
-        now = datetime.now(timezone.utc).timestamp()
-        channel_id = bot.settings.rename_chat.target_channel_id
-
         cache = {"channels": {}, "guilds": {}, "members": {}, "roles": {}}
 
-        async def get_or_fetch(cache_dict: dict, fetch_fn: callable, k):
+        async def get_or_fetch(cache_dict: dict, fetch_fn: Callable[[Any], Any], k):
             """Get from cache or fetch and store."""
             if k in cache_dict:
                 return cache_dict[k]
@@ -62,27 +60,26 @@ def register(bot: Bot):
         async def resolve_role(g: Guild, role_id: int) -> Role:
             return await get_or_fetch(cache["roles"], g.fetch_role, role_id)
 
-        with bot.storage(table="brazil_vacationers") as db:
-            for key, data in db.items():
-                end = data.get("end") or 0
+        vacation_db = VacationStore(bot.settings.storage_file, bot.settings)
+        items = vacation_db.list_entries(expired=True)
 
-                if now < end:
-                    continue
+        for item in items:
+            message_id = item.get("message")
+            guild_id = item.get("guild")
+            user_id = item.get("user")
+            channel_id = item.get("channel")
+            delay = item.get("delay")
 
-                guild_id, user_id = map(int, key.split(":"))
+            guild = await get_or_fetch(cache["guilds"], bot.fetch_guild, guild_id)
+            member = await get_or_fetch(cache["members"], guild.fetch_member, user_id)
+            channel = await get_or_fetch(cache["channels"], bot.fetch_channel, channel_id)
 
-                guild = await get_or_fetch(cache["guilds"], bot.fetch_guild, guild_id)
-                member = await get_or_fetch(cache["members"], guild.fetch_member, user_id)
-                channel = await get_or_fetch(cache["channels"], bot.fetch_channel, channel_id)
+            old_roles = [await resolve_role(guild, rid) for rid in item.get("old_roles", [])]
+            new_roles = [await resolve_role(guild, rid) for rid in item.get("new_roles", [])]
 
-                old_roles = [await resolve_role(guild, rid) for rid in data.get("old_roles", [])]
-                new_roles = [await resolve_role(guild, rid) for rid in data.get("new_roles", [])]
-
-                logger.info(f"Releasing {member.display_name} from Brazil...")
-                await release_from_brazil(bot, channel, member, old_roles, new_roles, data.get('message'), data.get("delay"))
-                del db[key]
-
-            db.commit()
+            logger.info(f"Releasing {member.display_name} from Brazil...")
+            await release_from_brazil(bot, channel, member, old_roles, new_roles, message_id, delay)
+            vacation_db.remove_entry(message_id)
 
     free_due_vacationers.start()
 
@@ -128,23 +125,23 @@ def register(bot: Bot):
 
             rolled = random.random()
             success = rolled < settings.success_chance
-            rolled = int(rolled / settings.success_chance) + 1
+            rolled = int(rolled // settings.success_chance + 1)
 
             # Check banned words
             if settings.contains_banned(newname):
                 if success:
-                    rolled = int(1.0 / settings.success_chance)
+                    rolled = int(1.0 // settings.success_chance)
 
                 success = False
                 logger.info(f"{interaction.user.display_name} used a bad word to rename the channel.")
 
+            streak_db = CounterStore(bot.settings.storage_file)
+
             if success:
                 # Rename channel
-                with bot.storage("brazil", autocommit=True) as db:
-                    postfix = settings.lowest_postfix(db.get("streak", 0)) or "."
-
-                    # Reset fail streak
-                    db["streak"] = 0
+                current_streak = streak_db.get_value("brazil")
+                postfix = settings.lowest_postfix(current_streak) or "."
+                streak_db.reset_counter("brazil")
 
                 await target_channel.edit(name=newname)
 
@@ -161,9 +158,7 @@ def register(bot: Bot):
             new_role = special_brazil_role if is_special else brazil_role
 
             # Save streak counter
-            with bot.storage(table="brazil", autocommit=True) as db:
-                current_streak = db.get("streak", 0) + 1
-                db["streak"] = current_streak
+            current_streak = streak_db.increment_counter("brazil")
 
             fail_message = f"<:PokeOff:1274829050648465428> {interaction.user.mention} will be sent to Brazil! They rolled {rolled}."
             fail_message_postfix = f"\n{current_streak} failed rolls in a row!"
@@ -192,24 +187,5 @@ def register(bot: Bot):
             delay = settings.random_delay()
 
             # Store user
-            with bot.storage(table="brazil_vacationers") as db:
-                now = datetime.now(timezone.utc)
-
-                old_roles = [brazil.member_role_id]
-                new_roles = [brazil.brazil_role_id]
-
-                if is_special:
-                    old_roles.append(settings.special_role_id)
-                    new_roles.append(brazil.special_brazil_role_id)
-
-                db[f"{interaction.guild_id}:{interaction.user.id}"] = {
-                    "delay": delay,
-                    "start": now.timestamp(),
-                    "end": (now + timedelta(seconds=delay)).timestamp(),
-                    "special": is_special,
-                    "old_roles": old_roles,
-                    "new_roles": new_roles,
-                    "message": message.id,
-                }
-
-                db.commit()
+            vacation_db = VacationStore(bot.settings.storage_file, bot.settings)
+            vacation_db.store(delay, interaction, message, special=is_special)

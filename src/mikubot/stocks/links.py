@@ -8,7 +8,7 @@ from .derivative_rules.base import KnockoutException
 from .models import Security, SecurityLinkConfig
 
 
-def update_linked_prices(market: Market, securities: dict[str, Security], interval: float, *, local: bool = False):
+def update_linked_prices(market: Market, securities: dict[str, Security], interval: float, *, local: bool = False) -> dict[str, tuple[float, float]]:
     now = datetime.now(timezone.utc)
     changes = {}
     cache = {}
@@ -97,12 +97,15 @@ def get_change_for_interval(ticker: str, seconds: int) -> float:
         # Pick granularity based on interval
         if seconds < 3600:
             # Use 5-minute candles
-            hist = stock.history(period="1d", interval="5m")
+            hist = stock.history(period="1d", interval="5m", timeout=3)
             steps = max(1, seconds // 300)  # 300s = 5m
         else:
             # Use hourly candles
-            hist = stock.history(period="5d", interval="1h")
+            hist = stock.history(period="5d", interval="1h", timeout=3)
             steps = max(1, seconds // 3600)  # 3600s = 1h
+
+        if hist.empty:
+            raise RuntimeError(f"Empty history")
 
         if len(hist) <= steps:
             return 0.0

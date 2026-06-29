@@ -10,7 +10,7 @@ if (-not $env:MIKUBOT_SETTINGS_FILE) {
 }
 
 do {
-    python -m mikubot
+    uv run mikubot run
     $code = $LASTEXITCODE
 
     if ($code -eq 39) {

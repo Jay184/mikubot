@@ -42,10 +42,12 @@
         "ignoredRoleId": 5555,
         "triggers": [
             {
+                "key": "ass-cat",
                 "pattern": "\\bass\\b",
                 "text": "https://cdn.discordapp.com/attachments/421865513820618752/1071615776127201424/169F55F1-C038-41DD-9264-BD3D9E8C6D60.gif"
             },
             {
+                "key": "sorry-mikubot",
                 "pattern": "sorry miku\\s*bot",
                 "replies": [
                     {

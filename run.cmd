@@ -11,7 +11,7 @@
 )
 
 :loop
-@python -m mikubot
+@uv run mikubot run
 @SET code=%ERRORLEVEL%
 
 @IF %code%==39 (

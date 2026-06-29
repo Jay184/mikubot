@@ -1,8 +1,17 @@
 from discord import Interaction
 from discord.app_commands import describe, checks, choices, Choice
 from capstone import Cs as Capstone, CS_ARCH_X86, CS_MODE_64, CS_OPT_SYNTAX_INTEL
-from pefile import PE
+from pefile import PE, SectionStructure
 from mikubot import Bot
+
+
+def get_section_by_rva(pe: PE, rva: int) -> SectionStructure | None:
+    for section in pe.sections:
+        start = section.VirtualAddress
+        end = start + max(section.Misc_VirtualSize, section.SizeOfRawData)
+        if start <= rva < end:
+            return section
+    return None
 
 
 def register(bot: Bot):
@@ -38,19 +47,24 @@ def register(bot: Bot):
 
         length = max(0x10, min(bot.settings.mm_code.max_length, length))
 
-        file_path = bot.settings.mm_code.binaries[version.value]
-        pe = PE(file_path, fast_load=True)
+        version_idx = version if isinstance(version, int) else version.value
+        file_path = bot.settings.mm_code.binaries[version_idx]
 
-        image_base = pe.OPTIONAL_HEADER.ImageBase
-        rva = address - image_base
-        data = pe.get_data(rva, length)
+        with PE(file_path, fast_load=True) as pe:
+            image_base = pe.OPTIONAL_HEADER.ImageBase
+            rva = address - image_base
+            section = get_section_by_rva(pe, rva)
 
-        if assembly:
-            instructions = md.disasm(data, address, length)
-            message = "\n".join(f"{i.address:08X}:  {i.mnemonic} {i.op_str}" for i in instructions)
-            await interaction.response.send_message(f"```x86asm\n{message}\n```")  # noqa
-        else:
-            message = format_bytes(data, address)
-            await interaction.response.send_message(f"```properties\n{message}\n```")  # noqa
+            if rva < 0 or section is None:
+                await interaction.response.send_message("Address is outside mapped sections.")
+                return
 
-        pe.close()
+            data = pe.get_data(rva, length)
+
+            if assembly:
+                instructions = md.disasm(data, address, length)
+                message = "\n".join(f"{i.address:08X}:  {i.mnemonic} {i.op_str}" for i in instructions)
+                await interaction.response.send_message(f"```x86asm\n{message}\n ```")  # noqa
+            else:
+                message = format_bytes(data, address)
+                await interaction.response.send_message(f"```properties\n{message}\n ```")  # noqa

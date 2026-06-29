@@ -1,6 +1,7 @@
 from loguru import logger
 import logging
 import sys
+import io
 
 from .config import LoggingSettings
 
@@ -37,6 +38,9 @@ class InterceptHandler(logging.Handler):
 
 
 def setup_logger(settings: LoggingSettings):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+
     logger.level("VERBOSE", no=15, color="<blue>")
 
     logger.remove()

@@ -2,7 +2,7 @@ from typing import Any, Generator
 from loguru import logger
 from sqlitedict import SqliteDict
 from datetime import datetime, timezone
-from discord import Client, Intents, Message, Thread, Member, User, Guild, Embed, Interaction
+from discord import Client, Intents, Message, Member, User, Guild, Embed, Interaction
 from discord import Activity, ActivityType, AuditLogAction
 from discord.utils import MISSING
 from discord.app_commands import CommandTree, errors
@@ -14,6 +14,7 @@ import msgpack
 from .config import Settings
 from .logger import InterceptHandler
 from .stocks.core import Market
+from .trigger_words import TriggerWordHandler
 
 
 class CustomCommandTree(CommandTree):
@@ -60,6 +61,7 @@ class Bot(Client):
         self.settings = settings
         self.market = Market(settings.market)
         self.market_executor = None
+        self.trigger_words_handler = TriggerWordHandler(self.settings.storage_file, self.settings.trigger_words)
 
     def run(
         self,
@@ -85,45 +87,14 @@ class Bot(Client):
     async def on_ready(self):
         logger.info(f"Logged on as {self.user}!")
         await self.change_presence(activity=Activity(type=ActivityType.listening, name="you"))
-        await self.release_from_brazil()
+        self.trigger_words_handler.create_statistics_table()
 
     async def on_message(self, message: Message):
         # No self replies
         if message.author == self.user:
             return
 
-        settings = self.settings.trigger_words
-
-        if not settings.allow_threads and isinstance(message.channel, Thread):
-            return
-
-        is_ignored = isinstance(message.author, Member) and message.author.get_role(settings.ignored_role_id)
-        if is_ignored:
-            logger.info(f"{message.author.display_name} ignored due to role.")
-            return
-
-        # Special trigger word in single channel
-        if message.channel.id == settings.team_chat_1_id:
-            if settings.team_trigger in message.content.lower():
-                reply_text = f"Go to <#{settings.team_chat_2_id}> pls."
-                await message.reply(reply_text, delete_after=5.0)
-                return
-
-        for trigger in settings.triggers:
-            if trigger.triggered(message.content):
-                reply_text = trigger.get_reply()
-
-                if not reply_text:
-                    continue
-
-                await message.reply(reply_text)
-
-                with self.storage(table="statistics.triggers", autocommit=True) as db:
-                    key = f"{message.author.id}::{trigger.pattern}"
-                    db[key] = db.get(key, 0) + 1
-
-                if not self.settings.trigger_words.allow_multiple:
-                    return
+        await self.trigger_words_handler.handle(message)
 
     async def on_message_delete(self, message: Message):
         if message.author == self.user:
@@ -285,35 +256,6 @@ class Bot(Client):
             # guild = await self.fetch_guild(1008898200184291389)
             synced_commands = await self.tree.sync()
             logger.info(f"Synced {len(synced_commands)} commands.")
-
-    async def release_from_brazil(self):
-        settings = self.settings.brazil
-
-        with self.storage(table="brazil_vacationers") as db:
-            for guild in self.guilds:
-                brazil_role = await guild.fetch_role(settings.brazil_role_id)
-                member_role = await guild.fetch_role(settings.member_role_id)
-                special_role = await guild.fetch_role(self.settings.rename_chat.special_role_id)
-                special_brazil_role = await guild.fetch_role(settings.special_brazil_role_id)
-
-                for member in brazil_role.members:
-                    await member.remove_roles(brazil_role)
-                    await member.add_roles(member_role)
-                    logger.info(f"{member.display_name} has been retrieved from Brazil!")
-
-                    if f"{guild.id}:{member.id}" in db:
-                        del db[f"{guild.id}:{member.id}"]
-
-                for member in special_brazil_role.members:
-                    await member.remove_roles(special_brazil_role)
-                    await member.add_roles(special_role)
-                    await member.add_roles(member_role)
-                    logger.info(f"{member.display_name} has been retrieved from Brazil!")
-
-                    if f"{guild.id}:{member.id}" in db:
-                        del db[f"{guild.id}:{member.id}"]
-
-            db.commit()
 
     def create_log_embed(self, subject: Member, description: str = None, *, color: int = None) -> Embed:
         embed = Embed(

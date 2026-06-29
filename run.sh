@@ -13,7 +13,7 @@ if [ -z "${MIKUBOT_SETTINGS_FILE:-}" ]; then
 fi
 
 while true; do
-    python -m mikubot
+    uv run mikubot run
     code=$?
 
     if [ "$code" -eq 39 ]; then

@@ -10,7 +10,7 @@ from pydantic.alias_generators import to_camel
 import os
 import random
 import re
-import requests
+import httpx
 
 from .stocks.models import SecurityConfig
 
@@ -141,8 +141,8 @@ class RenameChatSettings(MikuBotBaseModel):
                             if w.strip()
                         )
                 elif isinstance(src, UrlSource):
-                    resp = requests.get(str(src.url), timeout=5)
-                    if resp.ok:
+                    resp = httpx.get(str(src.url), timeout=5)
+                    if resp.is_success:
                         words.update(
                             w.strip().lower()
                             for w in resp.text.splitlines()
@@ -164,6 +164,8 @@ class RenameChatSettings(MikuBotBaseModel):
         for key in keys:
             if streak >= key:
                 return self.streak_postfixes[key].format(streak=streak)
+
+        return None
 
     def random_delay(self) -> float:
         """
@@ -195,6 +197,7 @@ class TriggerWordReply(MikuBotBaseModel):
 
 
 class TriggerWord(MikuBotBaseModel):
+    key: NonEmptyString | None = None
     pattern: NonEmptyString
     replies: list[TriggerWordReply] = Field(default_factory=list)
     text: MultilineText | None = None
@@ -300,7 +303,10 @@ class Settings(BaseSettings):
         from_attributes=True,
         populate_by_name=True,
         alias_generator=to_camel,
+        env_file=".env",
+        env_file_encoding="utf-8",
         env_prefix="mikubot_",
+        env_nested_delimiter="__",
         extra="ignore"
     )
 

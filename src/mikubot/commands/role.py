@@ -14,6 +14,8 @@ def register(bot: Bot):
         new_role = await interaction.guild.fetch_role(int(role.value))
 
         old_roles = (interaction.guild.get_role(int(_id)) for _id in bot.settings.choosable_roles.roles.values())
+        old_roles = (r for r in old_roles if r)
+
         await interaction.user.remove_roles(*old_roles)
         await interaction.user.add_roles(new_role)
 

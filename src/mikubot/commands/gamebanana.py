@@ -3,7 +3,7 @@ from discord.app_commands import describe, checks
 from urllib.parse import urljoin
 from datetime import datetime, timezone
 from mikubot import Bot
-import requests
+import httpx
 
 
 def register(bot: Bot):
@@ -59,7 +59,7 @@ def register(bot: Bot):
         if full:
             mod_id = data.get("_idRow")
             profile_url = f"https://gamebanana.com/apiv10/Mod/{mod_id}/ProfilePage"
-            response = requests.get(profile_url)
+            response = httpx.get(profile_url)
 
             if response.status_code == 200:
                 profile_data = response.json()
@@ -85,7 +85,7 @@ def register(bot: Bot):
         await interaction.response.defer()  # noqa
 
         url = f"https://gamebanana.com/apiv10/Game/16522/Subfeed?_nPage=1&_nPerpage=10&_sSort=default&_sName={query}"
-        response = requests.get(url)
+        response = httpx.get(url)
 
         if response.status_code != 200:
             return
