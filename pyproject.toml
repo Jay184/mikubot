@@ -1,6 +1,6 @@
 [project]
 name = "mikubot"
-version = "0.1.1"
+version = "0.1.2"
 description = "Discord bot used for the Eden-Project Discord server."
 keywords = ["discord", "eden", "miku", "vocaloid", "project diva"]
 authors = [
